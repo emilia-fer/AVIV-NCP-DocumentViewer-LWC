@@ -15,12 +15,10 @@ Contact / Case / Task pages.
 5. [Salesforce Metadata](#salesforce-metadata)
 6. [AWS Infrastructure](#aws-infrastructure)
 7. [Static Resources](#static-resources)
-8. [Installation & Deployment](#installation--deployment)
-9. [Post‑Install Configuration](#post-install-configuration)
-10. [Usage](#usage)
-11. [Extending the Package](#extending-the-package)
-12. [Troubleshooting](#troubleshooting)
-13. [License](#license)
+8. [Post‑Install Configuration](#post-install-configuration)
+9. [Usage](#usage)
+10. [Extending the Package](#extending-the-package)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
