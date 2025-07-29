@@ -53,20 +53,22 @@ Contact / Case / Task pages.
 ```text
 .
 ├─ force-app
-│  ├─ main
-│  │  ├─ default
-│  │  │  ├─ classes/             (Apex controllers & tests)
-│  │  │  ├─ lwc/
-│  │  │  │  ├─ s3DocViewer/
-│  │  │  │  ├─ pdfViewer/
-│  │  │  │  └─ docxViewer/
-│  │  │  ├─ objects/S3_File__c/
-│  │  │  └─ permissionsets/
-│  └─ …
+│  └─ main
+│     └─ default
+│        ├─ classes/              Apex controllers & tests
+│        ├─ externalCredentials/  
+│        ├─ lwc/
+│        │   ├─ s3DocViewer/      ← core component
+│        │   ├─ pdfViewer/        ← helper
+│        │   └─ docxViewer/       ← helper 
+│        ├─ namedCredentials/    
+│        ├─ objects/              Custom object **S3_File__c** & fields
+│        ├─ permissionsets/       
+│        └─ staticresources/     
 ├─ lambda/
-│  ├─ presign/          (generate‑presigned‑url)
-│  └─ msg-to-html/
-└─ staticresources/     (pdfjs, mammoth)
+│  ├─ presign/          generate‑presigned‑url 
+│  └─ msg-to-html/      .msg → eml converter  
+└─ README.md
 ```
 
 ---
