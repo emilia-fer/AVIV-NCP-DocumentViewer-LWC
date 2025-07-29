@@ -86,7 +86,7 @@ Contact / Case / Task pages.
 | Type              | API Name                                                                 | Notes                                                   |
 | ----------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
 | **Custom Object** | `S3_File__c`                                                             | Primary record for each file                            |
-| Custom Fields     | see [`objects/S3_File__c/`](force-app/main/default/objects)                                 | Includes `Task_ID__c` (Text)                            |
+| Custom Fields     | see [`objects/S3_File__c/`](force-app/main/default/objects/S3_File__c)                                 | Includes `Task_ID__c` (Text)                            |
 | Permission Set    | `S3_Doc_Viewer_User`                                                     | Grants CRUD on **S3\_File\_\_c**, Apex & NC access      |
 | Named Credential  | `S3PresignAPI`                                                           | Points to API Gateway endpoint, uses OAuth 2 or API Key |
 | Apex              | `S3DocService`, `S3PresignService`, `S3FileCreator`, `MsgPreviewService` | Business logic & callouts                               |
