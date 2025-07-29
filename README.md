@@ -67,7 +67,11 @@ Contact / Case / Task pages.
 │        └─ staticresources/     
 ├─ lambda/
 │  ├─ presign/          generate‑presigned‑url 
-│  └─ msg-to-html/      .msg → eml converter  
+│  └─ msg-to-html/      .msg → eml converter
+├─ docs/               
+│  ├─ metadata.md        Salesforce metadata & deployment notes
+│  ├─ lambda.md          AWS Lambda & API Gateway setup
+│  └─ developers.md      Component architecture & contribution guide
 └─ README.md
 ```
 
@@ -77,7 +81,6 @@ Contact / Case / Task pages.
 
 * **Salesforce CLI (sfdx)** ≥ v7.0
 * **AWS CLI** with a profile that can create S3 buckets & Lambda functions
-* Node 18 LTS (for LWC dev & serverless deployments)
 
 ---
 
@@ -128,8 +131,7 @@ Environment variables used by the Lambdas:
 
 1. Add **S3 Doc Viewer** component to the Lightning page(s) you need.
 2. Ensure the running user has the `S3_Doc_Viewer_User` permission set.
-3. (Optional) Restrict file‑type whitelist in `lambda/presign/app.py`.
-
+   
 ---
 
 ## Usage
