@@ -69,7 +69,7 @@ Contact / Case / Task pages.
 ├─ docs/               
 │  ├─ metadata.md        Salesforce metadata & deployment notes
 │  ├─ lambda.md          AWS Lambda & API Gateway setup
-│  └─ developers.md      Component architecture & contribution guide
+│  └─ developers.md      Component architecture 
 └─ README.md
 ```
 
@@ -112,7 +112,6 @@ Environment variables used by the Lambdas:
 | -------------------- | ------------------------------------------- | ---------------------- |
 | `BUCKET`             | `avivdocdev`                                | Target S3 bucket       |
 | `ALLOWED_EXTENSIONS` | `.txt,.pdf,.png,.jpg,.jpeg,.docx,.msg,.eml` | Server‑side validation |
-| *etc.*               |                                             |                        |
 
 ---
 
