@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Only_Real_Task_ID</fullName>
+    <active>false</active>
+    <errorConditionFormula>AND( NOT(ISBLANK(Task_ID__c)), NOT( REGEX(Task_ID__c,&quot;^00T[A-Za-z0-9]{12,14}$&quot;) ) )</errorConditionFormula>
+    <errorMessage>Task ID must be a 15‑ or 18‑char Task record Id</errorMessage>
+</ValidationRule>

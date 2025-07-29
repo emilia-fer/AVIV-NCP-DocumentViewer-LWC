@@ -1,0 +1,25 @@
+<template>
+    <template if:true={error}>
+        <p class="slds-text-color_error slds-p-horizontal_small">{error}</p>
+    </template>
+
+    <template if:false={error}>
+        <div lwc:dom="manual" id="msgContainer"
+             class="slds-p-around_small"></div>
+
+        <template if:true={attachments}>
+            <hr/>
+            <h3 class="slds-text-heading_small slds-p-horizontal_small">
+                Attachments
+            </h3>
+            <ul class="slds-list_dotted slds-p-horizontal_medium">
+                <template for:each={attachments} for:item="att">
+                    <li key={att.id}>
+                        <a href={att.url} target="_blank"
+                           download={att.fileName}>{att.fileName}</a>
+                    </li>
+                </template>
+            </ul>
+        </template>
+    </template>
+</template>

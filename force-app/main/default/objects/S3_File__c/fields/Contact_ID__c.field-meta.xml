@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Contact_ID__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Contact ID</label>
+    <referenceTo>Contact</referenceTo>
+    <relationshipLabel>S3 Files</relationshipLabel>
+    <relationshipName>S3_Files</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
