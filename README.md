@@ -124,6 +124,38 @@ Environment variables used by the Lambdas:
 
 ---
 
+## 1. **Custom Objects and Fields**
+
+* Deploy **objects/S3\_File\_\_c** first (including all its fields).
+* This ensures all lookups and referenced fields exist for everything else.
+
+## 2. **Static Resources**
+
+* Deploy everything under **staticresources/** (e.g., `pdfjs`, `mammoth`).
+* These are needed for the helper LWCs to work.
+
+## 3. **External Credentials and Named Credentials**
+
+* Deploy all **externalCredentials/** and **namedCredentials/**.
+* These are required for Apex classes to compile if they reference named credentials.
+
+## 4. **Apex Classes**
+
+* Deploy **all Apex classes** in **classes/** (including their meta.xml and tests).
+* Tests depend on the object, credentials, and sometimes named credentials.
+
+## 5. **Lightning Web Components**
+
+* Deploy all **lwc/** folders (including `s3DocViewer`, `pdfViewer`, `docxViewer`).
+* These depend on Apex and static resources.
+
+## 6. **Permission Sets**
+
+* Deploy everything under **permissionsets/**.
+* Assign these after deployment to grant user access to objects and credentials.
+
+---
+
 ## Post‑Install Configuration
 
 1. Add **S3 Doc Viewer** component to the Lightning page(s) you need.
