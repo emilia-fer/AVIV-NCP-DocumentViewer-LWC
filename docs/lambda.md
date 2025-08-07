@@ -1,4 +1,3 @@
-
 # AWS Lambda & API Gateway
 
 This project ships with two Python 3.13 Lambdas used by the Salesforce
