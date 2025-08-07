@@ -1,0 +1,22 @@
+{
+  "name": "aviv-ncp-documentviewer-lwc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightning Web Components and AWS Lambda helpers for S3 document viewing",
+  "scripts": {
+    "lint": "eslint force-app/main/default/lwc --ext .js",
+    "format": "prettier \"{force-app,docs}/**/*.{js,css,html,md,json}\" --write",
+    "test": "echo \"No tests implemented\" && exit 0"
+  },
+  "devDependencies": {
+    "@salesforce/eslint-config-lwc": "^4.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "eslintConfig": {
+    "extends": ["@salesforce/eslint-config-lwc"]
+  }
+}
