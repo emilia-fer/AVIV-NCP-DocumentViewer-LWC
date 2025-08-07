@@ -6,6 +6,7 @@ private class S3DocServiceTest {
         System.debug('[TEST] create file ' + name);
         return new S3_File__c(
             Name = name,
+            S3_Key__c = name,
             Size__c = 10,
             Type__c = 'image/png',
             Creation_Year__c = 2025,
@@ -124,5 +125,38 @@ private class S3DocServiceTest {
         System.assertEquals('new-1', after.get(file1.Id).Description__c);
         System.assertEquals('new-2', after.get(file2.Id).Description__c);
     }
-
+    @IsTest
+    static void testGetOpportunities() {
+        Opportunity o = new Opportunity(Name='Test Opp', StageName='Prospecting', CloseDate=Date.today());
+        insert o;
+        Test.startTest();
+        List<Opportunity> opps = S3DocService.getOpportunities();
+        Test.stopTest();
+        System.assert(!opps.isEmpty(), 'Should return at least one Opportunity');
+        System.assert(opps[0].Id != null, 'Returned Opportunity should have Id');
+    }
+    
+    @IsTest
+    static void testGetCases() {
+        Case c = new Case(Status='New', Origin='Web', Subject='Test');
+        insert c;
+        Test.startTest();
+        List<Case> cases = S3DocService.getCases();
+        Test.stopTest();
+        System.assert(!cases.isEmpty(), 'Should return at least one Case');
+        System.assert(cases[0].Id != null, 'Returned Case should have Id');
+    }
+    
+    @IsTest
+    static void testGetContacts() {
+        Account a = new Account(Name='Test Account');
+        insert a;
+        Contact ct = new Contact(LastName='Test Contact', AccountId=a.Id);
+        insert ct;
+        Test.startTest();
+        List<Contact> contacts = S3DocService.getContacts();
+        Test.stopTest();
+        System.assert(!contacts.isEmpty(), 'Should return at least one Contact');
+        System.assert(contacts[0].Id != null, 'Returned Contact should have Id');
+    }
 }
