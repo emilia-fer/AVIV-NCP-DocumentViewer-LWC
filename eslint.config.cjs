@@ -1,0 +1,1 @@
+module.exports = require('@salesforce/eslint-config-lwc').configs.recommended;

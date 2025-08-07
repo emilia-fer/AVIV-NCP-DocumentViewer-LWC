@@ -34,15 +34,18 @@ All classes include corresponding `*Test` files to provide Apex unit coverage.
 
 ## Testing
 
+Install Node dependencies once and execute the Jest suite for Lightning Web Components:
+
+```bash
+npm install
+npm test
+```
+
 Apex tests can be run with the Salesforce CLI:
 
 ```bash
 sfdx force:apex:test:run --resultformat human --codecoverage
 ```
-
-Lightning Web Components include Jest test stubs under each `__tests__` folder.
-This repository does not include a `package.json`, so running `npm test` will
-error until a Node test environment is set up.
 
 ## Related documentation
 

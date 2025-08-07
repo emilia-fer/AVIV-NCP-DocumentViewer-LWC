@@ -6,11 +6,12 @@
   "scripts": {
     "lint": "eslint force-app/main/default/lwc --ext .js",
     "format": "prettier \"{force-app,docs}/**/*.{js,css,html,md,json}\" --write",
-    "test": "echo \"No tests implemented\" && exit 0"
+    "test": "lwc-jest"
   },
   "devDependencies": {
     "@salesforce/eslint-config-lwc": "^4.0.0",
-    "eslint": "^9.0.0",
+    "@salesforce/sfdx-lwc-jest": "^7.0.1",
+    "eslint": "^9.32.0",
     "prettier": "^3.2.5"
   },
   "engines": {
