@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomLabels xmlns="http://soap.sforce.com/2006/04/metadata">
+    <labels>
+        <fullName>Advanced_Filters</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toggle filters</shortDescription>
+        <value>Advanced Filters</value>
+    </labels>
+    <labels>
+        <fullName>Attachments</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Attachments header</shortDescription>
+        <value>Attachments</value>
+    </labels>
+    <labels>
+        <fullName>Back</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Back icon alt</shortDescription>
+        <value>Back</value>
+    </labels>
+    <labels>
+        <fullName>Cancel</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Cancel button</shortDescription>
+        <value>Cancel</value>
+    </labels>
+    <labels>
+        <fullName>Close</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Close button</shortDescription>
+        <value>Close</value>
+    </labels>
+    <labels>
+        <fullName>Creation_Date</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Date label</shortDescription>
+        <value>Creation date</value>
+    </labels>
+    <labels>
+        <fullName>Date_GreaterEqual</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Date ≥ label</shortDescription>
+        <value>Date ≥</value>
+    </labels>
+    <labels>
+        <fullName>Date_LessEqual</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Date ≤ label</shortDescription>
+        <value>Date ≤</value>
+    </labels>
+    <labels>
+        <fullName>Description_Label</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Input label</shortDescription>
+        <value>Description</value>
+    </labels>
+    <labels>
+        <fullName>Documents</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Card title</shortDescription>
+        <value>Documents</value>
+    </labels>
+    <labels>
+        <fullName>Download</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Download icon alt</shortDescription>
+        <value>Download</value>
+    </labels>
+    <labels>
+        <fullName>File_Name</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Input label</shortDescription>
+        <value>File Name</value>
+    </labels>
+    <labels>
+        <fullName>Link_Case</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Lookup label</shortDescription>
+        <value>Link to Case</value>
+    </labels>
+    <labels>
+        <fullName>Link_Contact</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Lookup label</shortDescription>
+        <value>Link to Contact</value>
+    </labels>
+    <labels>
+        <fullName>Link_Opportunity</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Lookup label</shortDescription>
+        <value>Link to Opportunity</value>
+    </labels>
+    <labels>
+        <fullName>Link_Task</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Lookup label</shortDescription>
+        <value>Link to Task (Id)</value>
+    </labels>
+    <labels>
+        <fullName>Loading</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Spinner alt</shortDescription>
+        <value>Loading…</value>
+    </labels>
+    <labels>
+        <fullName>Next</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Next icon alt</shortDescription>
+        <value>Next</value>
+    </labels>
+    <labels>
+        <fullName>Preview</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Preview button</shortDescription>
+        <value>Preview</value>
+    </labels>
+    <labels>
+        <fullName>Preview_Not_Supported</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Unsupported text</shortDescription>
+        <value>Preview not supported.</value>
+    </labels>
+    <labels>
+        <fullName>Previous</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Prev icon alt</shortDescription>
+        <value>Previous</value>
+    </labels>
+    <labels>
+        <fullName>Remove</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Alt text</shortDescription>
+        <value>Remove</value>
+    </labels>
+    <labels>
+        <fullName>Remove_Selected_File</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Remove tooltip</shortDescription>
+        <value>Remove selected file</value>
+    </labels>
+    <labels>
+        <fullName>Rows</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Rows combo</shortDescription>
+        <value>Rows</value>
+    </labels>
+    <labels>
+        <fullName>Search_Description</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Placeholder</shortDescription>
+        <value>Search description</value>
+    </labels>
+    <labels>
+        <fullName>Search_File_Name</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Placeholder</shortDescription>
+        <value>Search file name</value>
+    </labels>
+    <labels>
+        <fullName>Size_GreaterEqual</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Size ≥ label</shortDescription>
+        <value>Size ≥</value>
+    </labels>
+    <labels>
+        <fullName>Size_Label</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Static text</shortDescription>
+        <value>Size</value>
+    </labels>
+    <labels>
+        <fullName>Size_LessEqual</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Size ≤ label</shortDescription>
+        <value>Size ≤</value>
+    </labels>
+    <labels>
+        <fullName>Type_Label</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Static text</shortDescription>
+        <value>Type</value>
+    </labels>
+    <labels>
+        <fullName>Upload</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Upload button</shortDescription>
+        <value>Upload</value>
+    </labels>
+    <labels>
+        <fullName>Upload_File</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Action button</shortDescription>
+        <value>Upload File</value>
+    </labels>
+    <labels>
+        <fullName>Upload_S3_Document</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Modal title</shortDescription>
+        <value>Upload S3 Document</value>
+    </labels>
+    <labels>
+        <fullName>Contains</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Filter mode</shortDescription>
+        <value>contains</value>
+    </labels>
+    <labels>
+        <fullName>Starts_With</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Filter mode</shortDescription>
+        <value>starts with</value>
+    </labels>
+    <labels>
+        <fullName>More_Columns</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toggle table</shortDescription>
+        <value>More Columns</value>
+    </labels>
+    <labels>
+        <fullName>Less_Columns</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toggle table</shortDescription>
+        <value>Less Columns</value>
+    </labels>
+    <labels>
+        <fullName>All_Types</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Type pick-list</shortDescription>
+        <value>All Types</value>
+    </labels>
+    <labels>
+        <fullName>Saved</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Saved</value>
+    </labels>
+    <labels>
+        <fullName>Uploaded_Title</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Uploaded</value>
+    </labels>
+    <labels>
+        <fullName>Upload_Failed</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Upload failed</value>
+    </labels>
+    <labels>
+        <fullName>Load_Error</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Load error</value>
+    </labels>
+    <labels>
+        <fullName>Download_Failed</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Download failed</value>
+    </labels>
+    <labels>
+        <fullName>No_File_Selected</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Upload validation</shortDescription>
+        <value>No file selected.</value>
+    </labels>
+        <labels>
+        <fullName>Save_Failed</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Toast title</shortDescription>
+        <value>Save failed</value>
+    </labels>
+    <labels>
+        <fullName>No_File_Selected</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Upload validation</shortDescription>
+        <value>No file selected.</value>
+    </labels>
+    <labels>
+        <fullName>Account_Col</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Account header</shortDescription>
+        <value>Account</value>
+    </labels>
+    <labels>
+        <fullName>Opportunity_Col</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Column header</shortDescription>
+        <value>Opportunity</value>
+    </labels>
+    <labels>
+        <fullName>Contact_Col</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Column header</shortDescription>
+        <value>Contact</value>
+    </labels>
+    <labels>
+        <fullName>Case_Col</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Column header</shortDescription>
+        <value>Case</value>
+    </labels>
+    <labels>
+        <fullName>File_Not_Found</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>Error: file missing</shortDescription>
+        <value>File "{0}" was not found in the archive.</value>
+    </labels>
+
+
+
+</CustomLabels>
