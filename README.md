@@ -1,4 +1,3 @@
-
 # S3 Doc Viewer Suite for Salesforce  + AWS 
 
 A Lightning Web Component bundle that lets users **store, preview and manage
@@ -15,10 +14,11 @@ Contact / Case / Task pages.
 5. [Salesforce Metadata](#salesforce-metadata)
 6. [AWS Infrastructure](#aws-infrastructure)
 7. [Static Resources](#static-resources)
-8. [Post‑Install Configuration](#post-install-configuration)
-9. [Usage](#usage)
-10. [Extending the Package](#extending-the-package)
-11. [Troubleshooting](#troubleshooting)
+8. [Deployment](#deployment)
+9. [Post‑Install Configuration](#post-install-configuration)
+10. [Usage](#usage)
+11. [Extending the Package](#extending-the-package)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -42,7 +42,7 @@ Contact / Case / Task pages.
 │  Named Credential   │──► Lambda: generate‑presigned‑url (API GW) ─┐
 └─────────────────────┘                                              │
                                Lambda: msg‑to‑html (for .msg files) ─┘
-````
+```
 
 ---
 
@@ -124,42 +124,22 @@ Environment variables used by the Lambdas:
 
 ---
 
-## 1. **Custom Objects and Fields**
+## Deployment
 
-* Deploy **objects/S3\_File\_\_c** first (including all its fields).
-* This ensures all lookups and referenced fields exist for everything else.
-
-## 2. **Static Resources**
-
-* Deploy everything under **staticresources/** (e.g., `pdfjs`, `mammoth`).
-* These are needed for the helper LWCs to work.
-
-## 3. **External Credentials and Named Credentials**
-
-* Deploy all **externalCredentials/** and **namedCredentials/**.
-* These are required for Apex classes to compile if they reference named credentials.
-
-## 4. **Apex Classes**
-
-* Deploy **all Apex classes** in **classes/** (including their meta.xml and tests).
-* Tests depend on the object, credentials, and sometimes named credentials.
-
-## 5. **Lightning Web Components**
-
-* Deploy all **lwc/** folders (including `s3DocViewer`, `pdfViewer`, `docxViewer`).
-* These depend on Apex and static resources.
-
-## 6. **Permission Sets**
-
-* Deploy everything under **permissionsets/**.
-* Assign these after deployment to grant user access to objects and credentials.
+1. **Custom Object & Fields** – deploy `force-app/main/default/objects/S3_File__c` and all field metadata.
+2. **External Credentials** – deploy `AWS_S3_Credential`, `AWS_Lambda_Cred` and `MsgPreviewAPICredential`.
+3. **Named Credentials** – deploy `AWS_S3`, `S3PresignAPI` and `MsgPreviewAPI`; these point to the provided S3 bucket and Lambda URLs.
+4. **Permission Sets** – deploy `AWS_S3_User` and `Msg_API_User` so users can access the external credentials.
+5. **Static Resources** – deploy the zipped resources in `force-app/main/default/staticresources` (`pdfjs`, `mammoth`).
+6. **Apex Classes & Tests** – deploy everything under `force-app/main/default/classes`.
+7. **Lightning Web Components** – deploy all bundles in `force-app/main/default/lwc` (`s3DocViewer`, `pdfViewer`, `docxViewer`).
 
 ---
 
 ## Post‑Install Configuration
 
 1. Add **S3 Doc Viewer** component to the Lightning page(s) you need.
-2. Ensure the running user has the `S3_Doc_Viewer_User` permission set.
+2. Assign the `AWS_S3_User` and `Msg_API_User` permission sets to anyone using the component.
    
 ---
 
