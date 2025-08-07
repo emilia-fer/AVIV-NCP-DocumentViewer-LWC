@@ -51,5 +51,10 @@ Resources:
           Properties:
             Path: /generate-presigned-url
             Method: ANY
+        Api2:
+          Type: Api
+          Properties:
+            Path: /generate-presigned-get-url
+            Method: ANY
       RuntimeManagementConfig:
         UpdateRuntimeOn: Auto
