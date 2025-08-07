@@ -50,11 +50,18 @@ private class S3DocServiceTest {
         };
 
         Test.startTest();
-        List<S3_File__c> rows = S3DocService.getDocs(a.Id);
+        List<Map<String,Object>> rows = S3DocService.getDocs(a.Id);
         Test.stopTest();
 
         System.debug('[SERVICE] getDocs rows: ' + rows);
         System.assertEquals(2, rows.size());
+
+        // verify the returned records include our inserted file names
+        Set<String> names = new Set<String>();
+        for (Map<String,Object> r : rows) {
+            names.add((String)r.get('Name'));
+        }
+        System.assertEquals(new Set<String>{'img1.png','img2.png'}, names);
     }
 
     /* ---------------- getFile success  ---------------- */

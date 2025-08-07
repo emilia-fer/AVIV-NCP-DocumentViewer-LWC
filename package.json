@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "eslint force-app/main/default/lwc --ext .js",
     "format": "prettier \"{force-app,docs}/**/*.{js,css,html,md,json}\" --write",
-    "test": "lwc-jest"
+    "test": "sfdx-lwc-jest"
   },
   "devDependencies": {
     "@salesforce/eslint-config-lwc": "^4.0.0",
