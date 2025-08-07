@@ -21,14 +21,27 @@ import getRelatedContacts from '@salesforce/apex/S3DocService.relatedContacts';
 import updateDescriptions from'@salesforce/apex/S3DocService.updateDescriptions';
 import createS3File from '@salesforce/apex/S3FileCreator.create';
 import getPresignedUrl from '@salesforce/apex/S3PresignService.getPresignedUrl';
+import getPresignedGetUrl from '@salesforce/apex/S3PresignService.getPresignedGetUrl';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import fetchMsg from '@salesforce/apex/MsgPreviewService.fetch';
 import { refreshApex } from '@salesforce/apex';
+
+/* ---------- i18n / Custom Labels ---------- */
+import LABELS from './labels';
+
+const {
+    fileName:        LABEL_FILE_NAME,
+    sizeLabel:       LABEL_SIZE_LABEL,
+    typeLabel:       LABEL_TYPE_LABEL,
+    creationDate:    LABEL_CREATION_DATE,
+    descriptionLabel:LABEL_DESCRIPTION_LABEL
+} = LABELS;
 
 /* ---------- MIME type mapping ---------- */
 const mapMime = (mime) => {
     if (!mime) return '';
     if (mime.startsWith('image/') || mime.startsWith('img/'))  return 'image';
+    if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tif', 'tiff'].includes(mime)) return 'image';
     if (mime === 'application/pdf') return 'pdf';
     if (mime === 'message/rfc822') return 'eml'
     if (mime.startsWith('text/'))   return 'text';
@@ -43,9 +56,6 @@ const mapMime = (mime) => {
 /* ---------- Constants ---------- */
 const currentYear   = new Date().getFullYear();
 const firstYear     = 2015;
-const BUCKET        = 'avivdocdev';
-const API_ROOT      = 'https://ixsx2em9v6.execute-api.eu-north-1.amazonaws.com';
-
 
 /* ---------- Helpers ---------- */
 
@@ -182,22 +192,24 @@ const PREFIX_MAP = {
 
 /* ---------- Column Definitions (fixed always shown) ---------- */
 const nameCol = {
-    label:'File Name',
+    label: LABEL_FILE_NAME,
     fieldName:'Name',
     type:'button',
     sortable:true,
     typeAttributes:{ label:{ fieldName:'Name' }, name:'preview', variant:'base' },
     initialWidth:300
 };
-const sizeCol = { label:'Size (bytes)', fieldName:'Size__c', type:'number', sortable:true, initialWidth:130 };
-const typeCol = { label:'Type', fieldName:'DisplayType', type:'text', sortable:true, initialWidth:90 };
-const yearCol = { label:'Date', fieldName:'Creation_Date__c', type:'date', sortable:true, initialWidth:80 };
+const sizeCol = { label: LABEL_SIZE_LABEL, fieldName:'Size__c', type:'number', sortable:true, initialWidth:130 };
+const typeCol = { label: LABEL_TYPE_LABEL, fieldName:'DisplayType', type:'text', sortable:true, initialWidth:90 };
+const yearCol = { label: LABEL_CREATION_DATE, fieldName:'Creation_Date__c', type:'date', sortable:true, initialWidth:80 };
 
 /* ---------- Context Helper ---------- */
 function resolveContext(id){ return PREFIX_MAP[id?.substr(0,3)] || 'Other'; }
 
 export default class S3DocViewer extends LightningElement {
     @api recordId;
+
+    labels = LABELS;
 
     /* ---------------- State / Tracked Vars ---------------- */
     @track docs;
@@ -213,7 +225,7 @@ export default class S3DocViewer extends LightningElement {
     @track dateTo;
     @track sizeMin;
     @track sizeMax;
-    @track typeOptions = [{ label: 'Type', value: 'all' }];
+    @track typeOptions = [{ label: this.labels.allTypes, value: 'all' }];
     @track showFilters = false;
     @track draftValues = [];
     @track pageSize   = 20;
@@ -270,19 +282,17 @@ export default class S3DocViewer extends LightningElement {
     @track upError             = '';       // user-friendly error
     @track upAttachments       = [];       // [{name,url,type}, …] – for eml/msg
     
-
-
-
-
+    
     /* ---------------- Non-reactive (used for revoking Blob URLs) ---------------- */
     pageRecordId = this.recordId;
     _blobUrl = undefined;
 
     /* ---------------- Options ---------------- */
     modeOptions = [
-        { label: 'contains',   value: 'contains' },
-        { label: 'starts with', value: 'starts' }
+        { label: this.labels.contains,   value: 'contains' },
+        { label: this.labels.startsWith, value: 'starts'   }
     ];
+
 
     yearOptions = Array.from(
         { length: currentYear - firstYear + 1 },
@@ -303,25 +313,25 @@ export default class S3DocViewer extends LightningElement {
 
         // Define optional lookup columns only once (do NOT change key names)
         this.accountCol = {
-            label:'Account',
+            label:this.labels.accountCol,
             fieldName:'AccountUrl',
             type:'url',
             typeAttributes:{ label:{ fieldName:'AccountName' }, target:'_self' }
         };
         this.oppCol = {
-            label:'Opportunity',
+            label: this.labels.opportunityCol,
             fieldName:'OpportunityUrl',
             type:'url',
             typeAttributes:{ label:{ fieldName:'OpportunityName' }, target:'_self' }
         };
         this.contactCol = {
-            label:'Contact',
+            label: this.labels.contactCol,
             fieldName:'ContactUrl',
             type:'url',
             typeAttributes:{ label:{ fieldName:'ContactName' }, target:'_self' }
         };
         this.caseCol = {
-            label:'Case',
+            label: this.labels.caseCol,
             fieldName:'CaseUrl',
             type:'url',
             typeAttributes:{ label:{ fieldName:'CaseNumber' }, target:'_self' }
@@ -372,7 +382,7 @@ export default class S3DocViewer extends LightningElement {
 
     get columns(){
         const descColDynamic = {
-            label       : 'Description',
+            label       : LABEL_DESCRIPTION_LABEL,
             fieldName   : 'Description__c',
             type        : 'text',
             editable    : true,
@@ -383,7 +393,11 @@ export default class S3DocViewer extends LightningElement {
             : [nameCol, sizeCol, typeCol, yearCol, descColDynamic];
     }
     get hasOptionals(){ return this.optionalCols.length > 0; }
-    get buttonLabel(){ return this.showExtended ? 'Less Columns' : 'More Columns'; }
+    get buttonLabel() {
+        return this.showExtended
+            ? this.labels.lessColumns
+            : this.labels.moreColumns;
+    }
     get descWidth() { return this.hasVisibleOptionals ? 260 : 530; }
 
     get sortedDocs() {
@@ -461,9 +475,7 @@ export default class S3DocViewer extends LightningElement {
     handleDescMode(e)     { this.descMode = e.detail.value;    this.pageNumber = 1; }
     nextPage()            { if (!this.disableNext)  this.pageNumber++; }
     prevPage()            { if (!this.disablePrev)  this.pageNumber--; }
-    handleDraft(e)        { this.draftValues = e.detail.draftValues; }
-
-    
+    handleDraft(e)        { this.draftValues = e.detail.draftValues; }    
     handleNewDescriptionChange(event) { this.newDescription = event.target.value;}
     handleNewDate(e){ this.newCreationDate = e.target.value; }
     handleNewYearChange(event) { this.newCreationYear = event.target.value; }
@@ -471,7 +483,6 @@ export default class S3DocViewer extends LightningElement {
     handleCaseChange(event) { this.newCaseId = event.detail.value; }
     handleContactChange(event) { this.newContactId = event.detail.value;}
     handleTaskChange(event) { this.newTaskId = event.detail.value; }
-
     openModal() { this.showModal = true; }
     closeModal() { 
         this.showModal = false; 
@@ -479,7 +490,6 @@ export default class S3DocViewer extends LightningElement {
         this.uploadMessage = '';
         // Optionally reset form fields here
     }
-    
     handleNewDescriptionChange(event) { this.newDescription = event.target.value; }
     handleNewYearChange(event) { this.newCreationYear = event.detail.value; }
     handleNewDate(e){ this.newCreationDate = e.target.value; }
@@ -544,7 +554,7 @@ export default class S3DocViewer extends LightningElement {
             typeCol,
             yearCol,
             {
-                label:'Description', fieldName:'Description__c',
+                label: LABEL_DESCRIPTION_LABEL, fieldName:'Description__c',
                 type:'text', editable:true, initialWidth: this.descWidth
             }
         ];
@@ -553,21 +563,32 @@ export default class S3DocViewer extends LightningElement {
             cols.push(this.taskCol);
         }
 
-        const skipFor = {
-            '001': [],                         // Account page
-            '006': ['Account'],                // Opportunity page
-            '003': ['Account'],                // Contact page
-            '500': ['Account', 'Contact']      // Case page
-        };
-
         // Add lookup columns based on actual data and context
-        const maybeAdd = (nameFld, label, urlFld, key) => {
-            if (host === key || skipFor[host]?.includes(label)) return;
+        const maybeAdd = (nameFld, englishKey, urlFld, keyPrefix) => {
+            if (host === keyPrefix) return;                     // never show “self”
+
+            // skip certain look-ups (same rules as before)
+            const skip = {
+                '001': [],                         // Account page
+                '006': ['Account'],                // Opportunity page
+                '003': ['Account'],                // Contact page
+                '500': ['Account', 'Contact']      // Case page
+            };
+            if (skip[host]?.includes(englishKey)) return;
+
             if (rows.some(r => r[nameFld])) {
+                /* map the English key -> proper label */
+                const translated =
+                    englishKey === 'Account'     ? this.labels.accountCol
+                    : englishKey === 'Opportunity' ? this.labels.opportunityCol
+                    : englishKey === 'Contact'     ? this.labels.contactCol
+                    : englishKey === 'Case'        ? this.labels.caseCol
+                    : englishKey;  // fallback (shouldn’t happen)
+
                 cols.push({
-                    label,
-                    fieldName : urlFld,
-                    type      : 'url',
+                    label       : translated,
+                    fieldName   : urlFld,
+                    type        : 'url',
                     typeAttributes : {
                         label  : { fieldName: nameFld },
                         target : '_self'
@@ -575,6 +596,7 @@ export default class S3DocViewer extends LightningElement {
                 });
             }
         };
+        
         maybeAdd('AccountName',     'Account',     'AccountUrl',     '001');
         maybeAdd('OpportunityName', 'Opportunity', 'OpportunityUrl', '006');
         maybeAdd('ContactName',     'Contact',     'ContactUrl',     '003');
@@ -620,7 +642,7 @@ export default class S3DocViewer extends LightningElement {
 
                 // Types for filter dropdown
                 const types = [...new Set(this.docs.map(r => r.DisplayType).filter(t => t))].sort();
-                this.typeOptions = [{ label: 'All Types', value: 'all' }, ...types.map(t => ({ label: t, value: t }))];
+                this.typeOptions = [{label: this.labels.allTypes, value: 'all'}, ...types.map(t => ({ label: t, value: t }))];
                 this.error = undefined;
             } else if (error) {
                 throw error;
@@ -629,7 +651,7 @@ export default class S3DocViewer extends LightningElement {
             this.error = this.safeMessage(e);
             console.error('[s3DocViewer] wire error', e);
             this.dispatchEvent(new ShowToastEvent({
-                title: 'Load error',
+                title: this.labels.loadError,
                 message: this.error,
                 variant: 'error'
             }));
@@ -676,12 +698,12 @@ export default class S3DocViewer extends LightningElement {
             if (dt) { dt.draftValues = []; }
 
             this.dispatchEvent(
-                new ShowToastEvent({ title: 'Saved', variant: 'success' })
+                new ShowToastEvent({ title: this.labels.saved, variant: 'success' })
             );
         } catch (err) {
             const msg = this.safeMessage(err);
             this.dispatchEvent(
-                new ShowToastEvent({ title: 'Save failed', message: msg, variant: 'error' })
+                new ShowToastEvent({ title: this.labels.saveFailed, message: msg, variant: 'error' })
             );
             console.error('[s3DocViewer] save error', err);
         } finally {
@@ -739,8 +761,6 @@ export default class S3DocViewer extends LightningElement {
         this.previewImageUrl = null;
         this.previewFileUrl  = URL.createObjectURL(this.selectedFile);
     }
-
-
 
 
     /* decide tone based on average brightness */
@@ -876,9 +896,6 @@ export default class S3DocViewer extends LightningElement {
         else                                reader.readAsArrayBuffer(this.selectedFile);
     }
 
-
-
-
     /* close button inside the inline preview */
     closeUploadPreview() {
         if (this.uploadPreviewSrc) URL.revokeObjectURL(this.uploadPreviewSrc);
@@ -888,7 +905,6 @@ export default class S3DocViewer extends LightningElement {
         this.uploadPreviewText  = null;
         this.uploadPreviewError = null;
     }
-
 
     clearSelectedFile() {
 
@@ -1011,6 +1027,12 @@ export default class S3DocViewer extends LightningElement {
             this.previewName = row.Name;
             this.previewS3Key = row.s3Key;
             this.previewMime = file.contentType || 'application/octet-stream';
+            if (this.previewMime === 'application/octet-stream') {
+                const ext = row.Name.split('.').pop().toLowerCase();
+                if (ext === 'gif') {                          // ← one-liner guess
+                    this.previewMime = 'image/gif';
+                }
+            }
             const dataUrl = `data:${this.previewMime};base64,${file.base64Data}`;
             if (row.Name.toLowerCase().endsWith('.msg')) {
                 this.previewMime = 'application/vnd.ms-outlook';
@@ -1075,9 +1097,10 @@ export default class S3DocViewer extends LightningElement {
                 this.previewText = undefined;
             }
         } catch (err) {
+            this.previewS3Key = row.s3Key;
             const msg = this.safeMessage(err);
             if (msg && msg.toLowerCase().includes('not found')) {
-                this.previewError = `File "${row.Name}" was not found in the archive.`;
+                this.previewError = this.labels.fileNotFound.replace('{0}', row.Name);
             } else {
                 this.previewError = msg || 'Unknown error retrieving file.';
             }
@@ -1109,27 +1132,44 @@ export default class S3DocViewer extends LightningElement {
      * ------------------------------ DOWNLOAD -------------------------------
      * ===================================================================== */
     async downloadFile() {
-        if (this.previewError) { return; } // nothing to download
+        // Always allow download if a file is selected
         try {
-            if (!this.previewSrc) {
-                const file = await getFile({ s3Key: this.previewS3Key });
-                this.previewMime = file.contentType || 'application/octet-stream';
-                this.previewSrc  = `data:${this.previewMime};base64,${file.base64Data}`;
+            // Prefer base64 if available (small files, <= 6MB)
+            if (this.previewSrc) {
+                const a = document.createElement('a');
+                a.href        = this.previewSrc;
+                a.download    = this.previewName;
+                a.style.display = 'none';
+                this.template.appendChild(a);
+                a.click();
+                this.template.removeChild(a);
+                return;
             }
+
+            // If not, get presigned S3 GET URL and open/download
+            const url = await getPresignedGetUrl({ s3Key: this.previewS3Key });
+            if (!url) throw new Error("Could not get download link");
+
+            // Open in new tab or force download (works for most file types)
             const a = document.createElement('a');
-            a.href        = this.previewSrc;
+            a.href        = url;
             a.download    = this.previewName;
+            a.target      = '_blank';
             a.style.display = 'none';
-            this.template.appendChild(a);
+            document.body.appendChild(a);
             a.click();
-            this.template.removeChild(a);
+            document.body.removeChild(a);
+
         } catch (err) {
             const msg = this.safeMessage(err);
-            this.dispatchEvent(new ShowToastEvent({
-                title:'Download failed', message:msg, variant:'error'
-            }));
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title:'Download failed', message:msg, variant:'error'
+                })
+            );
         }
     }
+
 
     /* ========================================================================*/
 
@@ -1137,7 +1177,7 @@ export default class S3DocViewer extends LightningElement {
         // reset UI state
         this.uploadMessage = '';
         if (!this.selectedFile) {
-            this.uploadMessage = 'No file selected.';
+            this.uploadMessage = this.labels.noFileSelected;
             return;
         }
 
@@ -1201,35 +1241,28 @@ export default class S3DocViewer extends LightningElement {
             /* success toast */
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title  : 'Uploaded',
+                    title  : this.labels.uploadedTitle,
                     message: `${this.editFileName} has been added`,
                     variant: 'success',
                     mode   : 'dismissable'
                 })
             );
-
             /* refresh list  */
             refreshApex(this.wiredDocsResult); 
-
             /* close the modal */
             this.closeModal();
-
         } catch (err) {
-
             // error toast 
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title  : 'Upload failed',
+                    title  : this.labels.uploadFailed,
                     message: err.body?.message || err.message,
                     variant: 'error',
                     mode   : 'sticky'
                 })
             );
-
         } finally {
             this.isUploading = false;
         }
     }
-
 }
-
