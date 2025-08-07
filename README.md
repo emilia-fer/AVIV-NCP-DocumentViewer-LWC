@@ -17,8 +17,9 @@ Contact / Case / Task pages.
 8. [Deployment](#deployment)
 9. [Post‑Install Configuration](#post-install-configuration)
 10. [Usage](#usage)
-11. [Extending the Package](#extending-the-package)
-12. [Troubleshooting](#troubleshooting)
+11. [Testing](#testing)
+12. [Extending the Package](#extending-the-package)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -64,8 +65,8 @@ Contact / Case / Task pages.
 │        ├─ permissionsets/       
 │        └─ staticresources/     
 ├─ lambda/
-│  ├─ presign/          generate‑presigned‑url 
-│  └─ msg-to-html/      .msg → eml converter
+│  ├─ GenerateS3PresignedUrl/  ← pre‑signed S3 URL service
+│  └─ MsgToEml/                ← .msg → HTML converter
 ├─ docs/               
 │  ├─ metadata.md        Salesforce metadata & deployment notes
 │  ├─ lambda.md          AWS Lambda & API Gateway setup
@@ -96,22 +97,22 @@ Contact / Case / Task pages.
 
 ## AWS Infrastructure
 
-| Resource        | Folder               | Description                                                                                 |
-| --------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| **S3 Bucket**   | —                    | Stores uploaded objects. CORS enabled (`PUT`, `GET`).                                       |
-| **Lambda #1**   | `lambda/presign`     | Returns a 5‑min pre‑signed `putObject` URL.                                                 |
-| **Lambda #2**   | `lambda/msg-to-html` | Converts `.msg` → HTML + inline attachments.                                                |
-| **API Gateway** | —                    | *Resource:* `/generate-presigned-url` → Lambda #1<br>*Resource:* `/msg-preview` → Lambda #2 |
+| Resource        | Folder                         | Description |
+| --------------- | ------------------------------ | ----------- |
+| **S3 Bucket**   | —                              | Stores uploaded objects. CORS enabled (`PUT`, `GET`). |
+| **Lambda #1**   | `lambda/GenerateS3PresignedUrl` | Generates pre-signed S3 URLs for uploads and downloads. |
+| **Lambda #2**   | `lambda/MsgToEml`              | Converts `.msg` → HTML with inline attachments. |
+| **API Gateway** | —                              | Routes:<br>`/generate-presigned-url` → Lambda #1<br>`/generate-presigned-get-url` → Lambda #1<br>`/convert` → Lambda #2 |
 
 > **Deployment**: both Lambdas can be zipped & deployed with AWS SAM:<br>
 > `sam build && sam deploy --stack-name s3-doc-viewer --guided`
 
 Environment variables used by the Lambdas:
 
-| Name                 | Example                                     | Meaning                |
-| -------------------- | ------------------------------------------- | ---------------------- |
-| `BUCKET`             | `avivdocdev`                                | Target S3 bucket       |
-| `ALLOWED_EXTENSIONS` | `.txt,.pdf,.png,.jpg,.jpeg,.docx,.msg,.eml` | Server‑side validation |
+| Name           | Example      | Meaning |
+| -------------- | ------------ | -------------------------------------------- |
+| `BUCKET`       | `avivdocdev` | Target S3 bucket for uploads and downloads |
+| `TARGET_BUCKET`| `avivdocdev` | Bucket containing `.msg` files to convert |
 
 ---
 
@@ -150,6 +151,23 @@ Environment variables used by the Lambdas:
 * Click **More Columns** → adds Account / Opportunity / Contact / Case / Task
   columns *only when at least one row contains data* for them.
 * Use the **filter drawer** to slice by date, size, type, name or description.
+
+---
+
+## Testing
+
+Run the Jest suite for Lightning Web Components:
+
+```bash
+npm install
+npm test
+```
+
+Execute Apex tests through the Salesforce CLI:
+
+```bash
+sfdx force:apex:test:run --resultformat human --codecoverage
+```
 
 ---
 
