@@ -19,7 +19,7 @@ jobs:
       - run: npm test
       - name: Check Python syntax
         run: python -m compileall lambda
-      - uses: sfdx-actions/setup-sfdx@v2
+      - uses: sfdx-actions/setup-salesforce-cli@v1
       - name: Authenticate to Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
