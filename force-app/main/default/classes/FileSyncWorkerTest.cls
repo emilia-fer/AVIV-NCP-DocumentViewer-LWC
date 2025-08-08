@@ -58,9 +58,7 @@ private class FileSyncWorkerTest {
         Map<String,S3_File__c> existingMap = new Map<String,S3_File__c>{
             (String)cv.Id => existing
         };
-        Test.startTest();
         S3_File__c skipped = FileSyncWorker.sync(cv, existingMap);
-        Test.stopTest();
         System.assertEquals(null, skipped, 'skip should return null');
         System.assertEquals(0, mock.callCount, 'skip should not call out');
     }

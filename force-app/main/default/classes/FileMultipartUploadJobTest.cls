@@ -181,11 +181,7 @@ private class FileMultipartUploadJobTest {
             // expected
         }
 
-        AsyncApexJob j = [
-            SELECT Status, NumberOfErrors
-            FROM   AsyncApexJob
-            WHERE  Id = :jobId
-        ];
+        AsyncApexJob j = Test.getJobInfo(jobId);
         System.assertEquals('Failed', j.Status,
             'Job should fail when a part upload returns 500');
         System.assertEquals(true, mock.abortSeen,
