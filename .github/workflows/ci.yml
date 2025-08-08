@@ -1,21 +1,20 @@
 name: CI
+
 on:
   push:
-    branches: [main]        # validate every push to main
-  pull_request:             # …and every PR
+    branches: [main]
+  pull_request:
 
 jobs:
   lint-test:
     runs-on: ubuntu-latest
 
     steps:
-      # ─── pull the repo ───────────────────────────────────────────────
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      # 1️⃣  Check out the repo
+      - uses: actions/checkout@v4
 
-      # ─── Node toolchain (for your LWC/eslint/jest steps) ────────────
-      - name: Use Node 20
-        uses: actions/setup-node@v4
+      # 2️⃣  Node – for LWC lint/tests
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -24,24 +23,28 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      # ─── quick syntax sweep of the Lambda sources ───────────────────
+      # 3️⃣  Quick Python syntax sweep of ./lambda
       - name: Check Python syntax
         run: python -m compileall lambda
 
-      # ─── Salesforce CLI ─────────────────────────────────────────────
-      - name: Install Salesforce CLI
-        run: npm install -g @salesforce/cli
+      # 4️⃣  Install the Salesforce CLI (latest)
+      - run: npm install -g @salesforce/cli
 
-      - name: Authenticate to CI org
+      # 5️⃣  Authenticate to the scratch / packaging org
+      - name: Auth to Salesforce
         env:
-          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}   # <-- store once in repo secrets
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
-          sf org login sfdx-url --sfdx-url-file auth-url.txt --alias testOrg --json
+          sf org login sfdx-url \
+            --sfdx-url-file auth-url.txt \
+            --alias testOrg \
+            --no-prompt \
+            --set-default
 
-      # ─── Validate & run all Apex tests (no changes pushed) ──────────
+      # 6️⃣  Validate metadata & run all Apex tests (CHECK-ONLY)
       - name: Validate deploy + run tests
         run: sf project deploy start --source-dir force-app \
-                                     --target-org testOrg \       
-                                     --test-level RunLocalTests \
-                                     --check-only
+                                     -o testOrg \
+                                     --check-only \
+                                     --test-level RunLocalTests
