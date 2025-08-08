@@ -1,3 +1,4 @@
+/* global MsgReader */
 import { LightningElement, api, track } from 'lwc';
 import { loadScript } from 'lightning/platformResourceLoader';
 import MSGREADER_MIN from '@salesforce/resourceUrl/msgreader_bundle';
@@ -22,7 +23,7 @@ export default class MsgViewer extends LightningElement {
             }
             this.renderMsg();
         })
-        .catch(e => { this.error = 'Unable to load MSG reader'; });
+        .catch(() => { this.error = 'Unable to load MSG reader'; });
 
     }
 
@@ -42,6 +43,7 @@ export default class MsgViewer extends LightningElement {
 
             /* body */
             const div = this.template.querySelector('#msgContainer');
+            // eslint-disable-next-line @lwc/lwc/no-inner-html
             div.innerHTML = html || `<pre>${body}</pre>`;
 
             /* attachments */
@@ -54,7 +56,6 @@ export default class MsgViewer extends LightningElement {
             }
         } catch (e) {
             // Corrected error logging
-            // eslint-disable-next-line no-console
             console.error('[msgViewer] FULL ERROR:', e, JSON.stringify(e));
             this.error = 'Unable to display this .msg file.';
         }

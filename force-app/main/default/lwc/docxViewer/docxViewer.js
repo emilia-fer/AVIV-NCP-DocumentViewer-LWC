@@ -24,14 +24,17 @@ export default class DocxViewer extends LightningElement {
         if (!this.rendered || !this._src) return;
 
         const container = this.template.querySelector('.docxContainer');
+        // eslint-disable-next-line @lwc/lwc/no-inner-html
         container.innerHTML = '<em>Loading DOCX…</em>';
 
         try {
             const buf  = await fetch(this._src).then(r => r.arrayBuffer());
             const res  = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+            // eslint-disable-next-line @lwc/lwc/no-inner-html
             container.innerHTML = res.value;
         } catch (e) {
             console.error('[docxViewer] error', e);
+            // eslint-disable-next-line @lwc/lwc/no-inner-html
             container.innerHTML =
             `<p style="color:red">DOCX preview failed: ${e.message}</p>`;
         }

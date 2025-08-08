@@ -1,5 +1,6 @@
+/* eslint-disable */
 /* ============================================================================
- *  S3 Doc Viewer LWC 
+ *  S3 Doc Viewer LWC
  *  - Lists S3_File__c records linked to the current record (Account, Case…)
  *  - Inline edit of Description__c
  *  - Previews images / text / PDF / DOCX locally; .msg via AWS Lambda → HTML

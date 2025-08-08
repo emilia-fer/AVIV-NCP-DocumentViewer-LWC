@@ -1,4 +1,5 @@
 (function () {
+  /* eslint-disable no-restricted-globals, @lwc/lwc/no-document-query, @lwc/lwc/no-inner-html, no-undef */
   /* Read ?b64=… */
   const params = new URLSearchParams(location.search);
   const b64 = params.get('b64');
@@ -47,7 +48,6 @@
   } catch (e) {
     document.getElementById('subject').innerText =
       'Unable to display this MSG file.';
-    /* eslint-disable-next-line no-console */
     console.error('[MsgPreview] error:', e);
   }
 })();
