@@ -1,6 +1,8 @@
 @IsTest
 private class FileSyncWorkerTest {
 
+    private static Integer calls = 0;
+
     /* simple mock that records call count and returns given status */
     private class CountingMock implements HttpCalloutMock {
         static Integer calls = 0;
@@ -8,6 +10,7 @@ private class FileSyncWorkerTest {
         CountingMock(Integer code){ this.status = code; }
         public HTTPResponse respond(HTTPRequest req){
             calls++;
+            FileSyncWorkerTest.calls++;
             HttpResponse res = new HttpResponse();
             res.setStatusCode(status);
             res.setBody('test');
@@ -33,6 +36,7 @@ private class FileSyncWorkerTest {
 
         /* -------- upload branch (200 OK) ----------------------- */
         CountingMock.calls = 0;
+        calls = 0;
         Test.setMock(HttpCalloutMock.class, new CountingMock(200));
 
         ContentVersion cv = makeCV('upload.txt', Blob.valueOf('abc'));
@@ -42,9 +46,11 @@ private class FileSyncWorkerTest {
 
         System.assertNotEquals(null, result, 'upload should return S3_File__c');
         System.assertEquals(1, CountingMock.calls, 'upload should call out once');
+        System.assertEquals(1, calls, 'upload should call out once');
 
         /* -------- skip branch (existing up-to-date) ------------ */
         CountingMock.calls = 0;
+        calls = 0;
         S3_File__c existing = new S3_File__c(
             Content_Version_ID__c = cv.Id,
             Content_Modified__c   = cv.LastModifiedDate,
@@ -59,10 +65,12 @@ private class FileSyncWorkerTest {
         S3_File__c skipped = FileSyncWorker.sync(cv, existingMap);
         System.assertEquals(null, skipped, 'skip should return null');
         System.assertEquals(0, CountingMock.calls, 'skip should not call out');
+        System.assertEquals(0, calls, 'skip should not call out');
     }
 
     @IsTest static void uploadError(){
         CountingMock.calls = 0;
+        calls = 0;
         Test.setMock(HttpCalloutMock.class, new CountingMock(500));
 
         ContentVersion cv = makeCV('error.txt', Blob.valueOf('xyz'));
@@ -75,5 +83,6 @@ private class FileSyncWorkerTest {
                           'error path must throw FileSyncException');
         }
         System.assertEquals(1, CountingMock.calls, 'error path should attempt callout');
+        System.assertEquals(1, calls, 'error path should attempt callout');
     }
 }

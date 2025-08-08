@@ -1,4 +1,4 @@
-import { createElement } from 'lwc';
+import { createElement } from '@lwc/engine-dom';
 import S3DocViewer from 'c/s3DocViewer';
 
 describe('c-s3-doc-viewer', () => {
