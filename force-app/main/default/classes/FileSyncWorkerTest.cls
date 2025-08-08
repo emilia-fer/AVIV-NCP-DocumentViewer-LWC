@@ -32,15 +32,17 @@ private class FileSyncWorkerTest {
     @IsTest static void uploadAndSkip(){
 
         /* -------- upload branch (200 OK) ----------------------- */
+        ContentVersion cv = makeCV('upload.txt', Blob.valueOf('abc'));
+
+        // commit setup DML to avoid pending-work callout errors
+        Test.startTest();
+        Test.stopTest();
+
         CountingMock mock = new CountingMock(200);
         Test.setMock(HttpCalloutMock.class, mock);
 
-        ContentVersion cv = makeCV('upload.txt', Blob.valueOf('abc'));
-
         Map<String,S3_File__c> emptyMap = new Map<String,S3_File__c>();
-        Test.startTest();
-        S3_File__c result = FileSyncWorker.sync(cv, emptyMap);  
-        Test.stopTest();        
+        S3_File__c result = FileSyncWorker.sync(cv, emptyMap);
 
         System.assertNotEquals(null, result, 'upload should return S3_File__c');
         System.assertEquals(1, mock.callCount, 'upload should call out once');
@@ -64,15 +66,16 @@ private class FileSyncWorkerTest {
     }
 
     @IsTest static void uploadError(){
+        ContentVersion cv = makeCV('error.txt', Blob.valueOf('xyz'));
+
+        Test.startTest();
+        Test.stopTest();
+
         CountingMock mock = new CountingMock(500);
         Test.setMock(HttpCalloutMock.class, mock);
 
-        ContentVersion cv = makeCV('error.txt', Blob.valueOf('xyz'));
-
         try{
-            Test.startTest();
             FileSyncWorker.sync(cv, new Map<String,S3_File__c>());
-            Test.stopTest();
             System.assert(false, 'Expected FileSyncException');
         }catch (FileSyncWorker.FileSyncException e){
             System.assert(e.getMessage().contains('S3 PUT failed'),

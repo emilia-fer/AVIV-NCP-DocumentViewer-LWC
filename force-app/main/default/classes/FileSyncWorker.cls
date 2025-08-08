@@ -20,8 +20,6 @@ public with sharing class FileSyncWorker {
      * or NULL when nothing changed.
      */
     /* inside FileSyncWorker.cls  ------------------------------------------- */
-
-    private static final Integer PART_LIMIT = 5 * 1024 * 1024;  // 5 MB
     
     public static S3_File__c sync(ContentVersion cv,
                                   Map<String,S3_File__c> existingMap){
@@ -49,18 +47,9 @@ public with sharing class FileSyncWorker {
                    + (String.isBlank(ext) ? '' : '.' + ext);
         
     
-        Integer sizeBytes = cv.ContentSize == null ? 0 : (Integer)cv.ContentSize;
-        
-        /* SMALL (≤ 5 MB) → single PUT; LARGE  → enqueue multipart */
-        if (sizeBytes <= PART_LIMIT) {
-            // fetch the blob ONLY for small files
-            Blob body = [SELECT VersionData FROM ContentVersion WHERE Id = :cv.Id].VersionData;
-            singlePut(key, body, cv.FileExtension);
-        } else {
-            System.enqueueJob(new FileMultipartUploadJob(cv.Id, key, mime(cv.FileExtension)));
-        }
+        Blob body = [SELECT VersionData FROM ContentVersion WHERE Id = :cv.Id].VersionData;
+        singlePut(key, body, cv.FileExtension);
 
-    
         /* --- 3.  prepare S3_File__c for upsert --------------------------- */
         S3_File__c up = existing == null ? new S3_File__c()
                                          : existing.clone(false, true, true, true);
