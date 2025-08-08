@@ -19,3 +19,12 @@ jobs:
       - run: npm test
       - name: Check Python syntax
         run: python -m compileall lambda
+      - uses: sfdx-actions/setup-sfdx@v2
+      - name: Authenticate to Salesforce
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          echo "$SFDX_AUTH_URL" > auth-url.txt
+          sfdx auth:sfdxurl:store -f auth-url.txt -a testOrg
+      - name: Run Apex tests
+        run: sfdx force:source:deploy -p force-app -u testOrg -c -l RunLocalTests
