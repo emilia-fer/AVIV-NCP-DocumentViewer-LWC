@@ -32,13 +32,7 @@ jobs:
           sf org login sfdx-url --sfdx-url-file auth-url.txt --alias deployOrg --json
 
       - name: Deploy to Salesforce
-        run: |
-          sf project deploy start \
-            --metadata-dir force-app \     # adjust if you renamed the folder
-            --target-org deployOrg \
-            --wait 30 \                    # minutes to stream the tail logs
-            --test-level RunLocalTests \
-            --json
+        run: sf project deploy start --target-org deployOrg
 
   # ────────────────────────────────────────────────────────────────────
   deploy-lambda:
