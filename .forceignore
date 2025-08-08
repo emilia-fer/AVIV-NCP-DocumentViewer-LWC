@@ -1,0 +1,7 @@
+# Exclude Jest tests and config files from deployment
+**/__tests__/**
+**/*.test.js
+# Ignore configuration files not needed in org
+**/.eslintrc.*
+**/jsconfig.json
+**/node_modules/**
