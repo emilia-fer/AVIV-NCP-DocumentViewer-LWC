@@ -6,22 +6,27 @@ on:
   workflow_dispatch:
 
 jobs:
+#───────────────────────────────────────────────────────────────────────────────
+# 1.  SALESFORCE  ──────────────────────────────────────────────────────────────
+#───────────────────────────────────────────────────────────────────────────────
   deploy-salesforce:
     runs-on: ubuntu-latest
 
     steps:
+      # ── A. Check out the repo ──────────────────────────────────────────────
       - uses: actions/checkout@v4
 
+      # ── B. Node env for any NPM scripts (optional) ─────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       - run: npm ci
 
+      # ── C. Install the Salesforce CLI (latest) ─────────────────────────────
       - run: npm install -g @salesforce/cli
 
-      # authenticate to the deployment org
+      # ── D. Auth to the org via the secret SFDX_AUTH_URL ────────────────────
       - name: Authenticate to Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
@@ -29,15 +34,24 @@ jobs:
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sf org login sfdx-url --sfdx-url-file auth-url.txt --alias deployOrg --json
 
-      # deploy everything under force-app/
-      - name: Deploy to Salesforce
+      # ── E.  Build a one-off package.xml from everything in force-app ───────
+      - name: Generate manifest
+        run: |
+          sf project generate manifest --source-dir force-app --name tmp-pkg.xml
+
+      # ── F.  Deploy + destructiveChanges in a single call ───────────────────
+      - name: Deploy to Salesforce (+ delete old classes)
         run: |
           sf project deploy start \
-            -d force-app \
+            --manifest tmp-pkg.xml \
             --post-destructive-changes manifest/destructiveChangesPost.xml \
-            -o deployOrg \
-            --test-level RunLocalTests
+            --target-org deployOrg \
+            --test-level RunLocalTests \
+            --coverage-formatters human
 
+#───────────────────────────────────────────────────────────────────────────────
+# 2.  AWS SAM (only runs if Salesforce deploy succeeded)  ─────────────────────
+#───────────────────────────────────────────────────────────────────────────────
   deploy-lambda:
     runs-on: ubuntu-latest
     needs: deploy-salesforce
@@ -49,9 +63,9 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region:            ${{ secrets.AWS_REGION }}
 
       - run: sam build
       - run: |
