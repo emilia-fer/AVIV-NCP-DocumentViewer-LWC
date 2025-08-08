@@ -44,7 +44,4 @@ jobs:
 
       # 6️⃣  Validate metadata & run all Apex tests (CHECK-ONLY)
       - name: Validate deploy + run tests
-        run: sf project deploy start --source-dir force-app \
-                                     -o testOrg \
-                                     --check-only \
-                                     --test-level RunLocalTests
+        run: sf project deploy start --source-dir force-app -o testOrg --check-only --test-level RunLocalTests
