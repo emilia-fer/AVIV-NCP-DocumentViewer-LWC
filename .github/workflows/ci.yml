@@ -34,4 +34,4 @@ jobs:
           sfdx auth:sfdxurl:store -f auth-url.txt -a testOrg
 
       - name: Run Apex tests
-        run: sfdx force:source:deploy -p force-app -u testOrg -c -l RunLocalTests
+        run: sf project deploy start --source-path force-app --target-org testOrg --check-only --test-level RunLocalTests
