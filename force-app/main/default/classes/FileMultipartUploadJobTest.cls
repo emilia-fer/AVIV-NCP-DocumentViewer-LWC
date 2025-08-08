@@ -173,9 +173,13 @@ private class FileMultipartUploadJobTest {
         String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
 
         Test.startTest();
-            Id jobId = System.enqueueJob(
-                new FileMultipartUploadJob(cv.Id, key, 'text/plain'));
-        Test.stopTest();
+        Id jobId = System.enqueueJob(new FileMultipartUploadJob(cv.Id, key, 'text/plain'));
+        try {
+            Test.stopTest();
+            System.assert(false, 'Expected UploadException');
+        } catch (FileMultipartUploadJob.UploadException e) {
+            // expected
+        }
 
         AsyncApexJob j = [
             SELECT Status, NumberOfErrors

@@ -10,7 +10,7 @@ private class S3DocServiceTest {
             Size__c = 10,
             Type__c = 'image/png',
             Creation_Year__c = 2025,
-            Record_ID__c = pid
+            Account_ID__c = pid
         );
     }
 

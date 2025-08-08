@@ -38,7 +38,9 @@ private class FileSyncWorkerTest {
         ContentVersion cv = makeCV('upload.txt', Blob.valueOf('abc'));
 
         Map<String,S3_File__c> emptyMap = new Map<String,S3_File__c>();
-        S3_File__c result = FileSyncWorker.sync(cv, emptyMap);
+        Test.startTest();
+        S3_File__c result = FileSyncWorker.sync(cv, emptyMap);  
+        Test.stopTest();        
 
         System.assertNotEquals(null, result, 'upload should return S3_File__c');
         System.assertEquals(1, mock.callCount, 'upload should call out once');
@@ -56,8 +58,9 @@ private class FileSyncWorkerTest {
         Map<String,S3_File__c> existingMap = new Map<String,S3_File__c>{
             (String)cv.Id => existing
         };
-
+        Test.startTest();
         S3_File__c skipped = FileSyncWorker.sync(cv, existingMap);
+        Test.stopTest();
         System.assertEquals(null, skipped, 'skip should return null');
         System.assertEquals(0, mock.callCount, 'skip should not call out');
     }
@@ -69,7 +72,9 @@ private class FileSyncWorkerTest {
         ContentVersion cv = makeCV('error.txt', Blob.valueOf('xyz'));
 
         try{
+            Test.startTest();
             FileSyncWorker.sync(cv, new Map<String,S3_File__c>());
+            Test.stopTest();
             System.assert(false, 'Expected FileSyncException');
         }catch (FileSyncWorker.FileSyncException e){
             System.assert(e.getMessage().contains('S3 PUT failed'),
