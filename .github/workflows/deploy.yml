@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - uses: sfdx-actions/setup-sfdx@v2
+      - uses: sfdx-actions/setup-salesforce-cli@v1
       - run: npm ci
       - name: Authenticate to Salesforce
         env:
