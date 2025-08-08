@@ -1,4 +1,4 @@
-import { createElement } from '@lwc/engine-dom';
+import { createElement } from 'lwc';
 import MsgViewer from 'c/msgViewer';
 
 describe('c-msg-viewer', () => {

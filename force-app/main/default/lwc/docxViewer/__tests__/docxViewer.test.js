@@ -1,4 +1,4 @@
-import { createElement } from '@lwc/engine-dom';
+import { createElement } from 'lwc';
 import DocxViewer from 'c/docxViewer';
 
 describe('c-docx-viewer', () => {

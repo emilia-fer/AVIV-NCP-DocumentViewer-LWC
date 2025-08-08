@@ -1,4 +1,4 @@
-import { createElement } from '@lwc/engine-dom';
+import { createElement } from 'lwc';
 import PdfViewer from 'c/pdfViewer';
 
 describe('c-pdf-viewer', () => {
