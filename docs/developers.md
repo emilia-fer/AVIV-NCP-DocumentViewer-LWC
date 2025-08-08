@@ -10,14 +10,13 @@ and where to add new features.
 | `s3DocViewer` | `force-app/main/default/lwc/s3DocViewer` | Main UI for listing, uploading and previewing `S3_File__c` records. Calls multiple Apex services for data and S3 access. |
 | `pdfViewer` | `force-app/main/default/lwc/pdfViewer` | Wraps the `pdfjs` static resource to display PDFs. |
 | `docxViewer` | `force-app/main/default/lwc/docxViewer` | Uses the `mammoth` static resource to render `.docx` files. |
-| `msgViewer` | `force-app/main/default/lwc/msgViewer` | Renders Outlook `.msg` files by embedding HTML returned from `MsgPreviewService.fetch`. |
 | `test_component` | `force-app/main/default/lwc/test_component` | Simple harness used by the Jest tests. |
 
 ### s3DocViewer flow
 1. Fetches records via `S3DocService.getDocs`.
 2. Uploads files by requesting a pre‑signed URL from `S3PresignService.getPresignedUrl` and then calling `S3FileCreator.create` to insert the record.
 3. Downloads files using `S3PresignService.getPresignedGetUrl`.
-4. Previews `.msg` files by calling `MsgPreviewService.fetch` and passing the returned HTML to `msgViewer`.
+4. Previews `.msg` files by calling `MsgPreviewService.fetch` and embedding the returned HTML and attachments directly.
 
 ## Apex classes
 
