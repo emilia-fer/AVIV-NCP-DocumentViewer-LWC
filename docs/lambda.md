@@ -2,7 +2,13 @@
 
 This project ships with two Python 3.13 Lambdas used by the Salesforce
 components. Each folder contains an AWS SAM template so the functions can be
-built and deployed with `sam build && sam deploy --guided`.
+built and deployed with `sam build && sam deploy --guided`.  For a single stack
+deployment of **both** functions the repository root now provides
+[`template.yml`](../template.yml):
+
+```bash
+sam build && sam deploy --stack-name s3-doc-viewer --guided
+```
 
 ## GenerateS3PresignedUrl
 

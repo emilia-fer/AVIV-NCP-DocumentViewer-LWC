@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless stack for the S3 Doc Viewer Lambdas
+
+Resources:
+  GenerateS3PresignedUrl:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/GenerateS3PresignedUrl/src
+      Description: Generates pre-signed S3 URLs for uploads and downloads
+      MemorySize: 128
+      Timeout: 3
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.13
+      Architectures:
+        - x86_64
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          BUCKET: avivdocdev
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 21600
+        MaximumRetryAttempts: 2
+      PackageType: Zip
+      Policies:
+        - Statement:
+            - Sid: AllowS3PutOnly
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: arn:aws:s3:::avivdocdev/*
+            - Sid: AllowBasicLambdaLogging
+              Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      RecursiveLoop: Terminate
+      SnapStart:
+        ApplyOn: None
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /generate-presigned-url
+            Method: ANY
+        Api2:
+          Type: Api
+          Properties:
+            Path: /generate-presigned-get-url
+            Method: ANY
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
+
+  MsgToEml:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/MsgToEml/src
+      Description: Converts .msg email files to HTML and attachments
+      MemorySize: 256
+      Timeout: 60
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.13
+      Architectures:
+        - x86_64
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          TARGET_BUCKET: avivdocdev
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 21600
+        MaximumRetryAttempts: 2
+      PackageType: Zip
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource: arn:aws:logs:eu-north-1:992382709732:*
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                - arn:aws:logs:eu-north-1:992382709732:log-group:/aws/lambda/MsgToEml:*
+            - Sid: ReadOnlySpecificBucket
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - arn:aws:s3:::avivdocdev
+                - arn:aws:s3:::avivdocdev/*
+      RecursiveLoop: Terminate
+      SnapStart:
+        ApplyOn: None
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /MyResource
+            Method: ANY
+        Api2:
+          Type: Api
+          Properties:
+            Path: /convert
+            Method: ANY
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL for Prod stage
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
