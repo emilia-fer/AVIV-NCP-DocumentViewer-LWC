@@ -47,7 +47,7 @@ jobs:
             --post-destructive-changes manifest/destructiveChangesPost.xml \
             --target-org deployOrg \
             --test-level RunLocalTests \
-            --coverage-formatters human
+            --coverage-formatters text
 
 #───────────────────────────────────────────────────────────────────────────────
 # 2.  AWS SAM (only runs if Salesforce deploy succeeded)  ─────────────────────
