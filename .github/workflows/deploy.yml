@@ -10,18 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - uses: sfdx-actions/setup-salesforce-cli@v1
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
       - run: npm ci
+
       - name: Authenticate to Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sfdx auth:sfdxurl:store -f auth-url.txt -a deployOrg
+
       - name: Deploy to Salesforce
         run: sfdx force:source:deploy -p force-app -u deployOrg
 
@@ -38,4 +44,3 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
       - run: sam build
       - run: sam deploy --stack-name doc-viewer --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM
-

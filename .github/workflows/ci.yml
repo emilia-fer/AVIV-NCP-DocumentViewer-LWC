@@ -10,21 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci
       - run: npm run lint
       - run: npm test
+
       - name: Check Python syntax
         run: python -m compileall lambda
-      - uses: sfdx-actions/setup-salesforce-cli@v1
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
       - name: Authenticate to Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sfdx auth:sfdxurl:store -f auth-url.txt -a testOrg
+
       - name: Run Apex tests
         run: sfdx force:source:deploy -p force-app -u testOrg -c -l RunLocalTests
