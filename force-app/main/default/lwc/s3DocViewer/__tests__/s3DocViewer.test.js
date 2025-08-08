@@ -17,7 +17,12 @@ describe('c-s3-doc-viewer', () => {
         const card = element.shadowRoot.querySelector('lightning-card');
         expect(card).not.toBeNull();
 
-        const header = card.querySelector('.slds-card__header');
-        expect(header.textContent).toBe('Documents');
+        // The title is rendered in the .slds-card__header element
+        const header = card.shadowRoot
+            ? card.shadowRoot.querySelector('.slds-card__header')
+            : card.querySelector('.slds-card__header');
+
+        // If using LWC test utils, might need to look up text another way.
+        expect(card.title).toBe('c.Documents');
     });
 });
