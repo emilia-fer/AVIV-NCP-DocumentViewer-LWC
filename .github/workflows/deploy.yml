@@ -1,46 +1,71 @@
 name: CD
-
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main]        # auto-deploy everything merged to main
+  workflow_dispatch:        # …or manual trigger
 
 jobs:
+  # ────────────────────────────────────────────────────────────────────
   deploy-salesforce:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install Salesforce CLI
-        run: npm install --global @salesforce/cli
-
       - run: npm ci
 
-      - name: Authenticate to Salesforce
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Authenticate to deployment org
         env:
-          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}   # same secret, but may point to prod/sandbox
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
-          sfdx auth:sfdxurl:store -f auth-url.txt -a deployOrg
+          sf org login sfdx-url --sfdx-url-file auth-url.txt --alias deployOrg --json
 
       - name: Deploy to Salesforce
-        run: sf project deploy start force-app --target-org deployOrg
+        run: |
+          sf project deploy start \
+            --metadata-dir force-app \     # adjust if you renamed the folder
+            --target-org deployOrg \
+            --wait 30 \                    # minutes to stream the tail logs
+            --test-level RunLocalTests \
+            --json
 
+  # ────────────────────────────────────────────────────────────────────
   deploy-lambda:
     runs-on: ubuntu-latest
-    needs: deploy-salesforce
+    needs: deploy-salesforce          # waits for the SF deploy to finish
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/setup-sam@v2
-      - uses: aws-actions/configure-aws-credentials@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - run: sam build
-      - run: sam deploy --stack-name doc-viewer --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - name: Build Lambda package(s)
+        run: sam build
+
+      - name: Deploy Lambda stack
+        run: |
+          sam deploy \
+            --stack-name doc-viewer \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --capabilities CAPABILITY_IAM

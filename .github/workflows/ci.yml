@@ -1,17 +1,21 @@
 name: CI
-
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: [main]        # validate every push to main
+  pull_request:             # …and every PR
 
 jobs:
   lint-test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      # ─── pull the repo ───────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ─── Node toolchain (for your LWC/eslint/jest steps) ────────────
+      - name: Use Node 20
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -20,18 +24,27 @@ jobs:
       - run: npm run lint
       - run: npm test
 
+      # ─── quick syntax sweep of the Lambda sources ───────────────────
       - name: Check Python syntax
         run: python -m compileall lambda
 
+      # ─── Salesforce CLI ─────────────────────────────────────────────
       - name: Install Salesforce CLI
-        run: npm install --global @salesforce/cli
+        run: npm install -g @salesforce/cli
 
-      - name: Authenticate to Salesforce
+      - name: Authenticate to CI org
         env:
-          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}   # <-- store once in repo secrets
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
-          sfdx auth:sfdxurl:store -f auth-url.txt -a testOrg
+          sf org login sfdx-url --sfdx-url-file auth-url.txt --alias testOrg --json
 
-      - name: Run Apex tests
-        run: sf project deploy start force-app --target-org testOrg --test-level RunLocalTests
+      # ─── Validate & run all Apex tests (no changes pushed) ──────────
+      - name: Validate deploy + run tests
+        run: |
+          sf project deploy start \
+            --metadata-dir force-app \     # change only if your source lives elsewhere
+            --target-org testOrg \
+            --dry-run \                    # = old --check-only
+            --test-level RunLocalTests \
+            --json
