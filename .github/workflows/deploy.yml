@@ -31,9 +31,11 @@ jobs:
 
       # deploy everything under force-app/
       - name: Deploy to Salesforce
+        - name: Deploy to Salesforce
         run: |
           sf project deploy start \
             -d force-app \
+            --post-destructive-changes manifest/destructiveChangesPost.xml \
             -o deployOrg \
             --test-level RunLocalTests
 
