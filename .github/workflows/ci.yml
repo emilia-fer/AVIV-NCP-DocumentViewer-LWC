@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣  Check out the repo
+      # ── checkout code ──────────────────────────────────────────────
       - uses: actions/checkout@v4
 
-      # 2️⃣  Node – for LWC lint/tests
+      # ── Node toolchain for LWC lint / Jest tests ──────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -23,25 +23,26 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      # 3️⃣  Quick Python syntax sweep of ./lambda
+      # ── light sanity check of the Lambda code ──────────────────────
       - name: Check Python syntax
         run: python -m compileall lambda
 
-      # 4️⃣  Install the Salesforce CLI (latest)
+      # ── install latest Salesforce CLI (sf ≥2.100) ─────────────────
       - run: npm install -g @salesforce/cli
 
-      # 5️⃣  Authenticate to the scratch / packaging org
-      - name: Auth to Salesforce
+      # ── authenticate to the scratch / CI org ──────────────────────
+      - name: Authenticate to Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
-          sf org login sfdx-url \
-            --sfdx-url-file auth-url.txt \
-            --alias testOrg \
-            --no-prompt \
-            --set-default
+          sf org login sfdx-url --sfdx-url-file auth-url.txt --alias testOrg --json
 
-      # 6️⃣  Validate metadata & run all Apex tests (CHECK-ONLY)
-      - name: Validate deploy + run tests
-        run: sf project deploy start --source-dir force-app -o testOrg --check-only --test-level RunLocalTests
+      # ── validate metadata & run all Apex tests (no changes pushed) ─
+      - name: Validate deploy & run tests
+        run: |
+          sf project deploy start \
+            -d force-app \
+            -o testOrg \
+            --dry-run \
+            --test-level RunLocalTests
