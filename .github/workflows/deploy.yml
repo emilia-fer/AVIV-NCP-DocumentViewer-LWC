@@ -70,7 +70,9 @@ jobs:
       - run: sam build
       - run: |
           sam deploy \
-            --stack-name doc-viewer \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --capabilities CAPABILITY_IAM
+          --stack-name doc-viewer \
+          --s3-bucket avivdocdev \
+          --region eu-north-1 \
+          --capabilities CAPABILITY_IAM \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset
