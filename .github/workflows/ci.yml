@@ -41,10 +41,7 @@ jobs:
 
       # ─── Validate & run all Apex tests (no changes pushed) ──────────
       - name: Validate deploy + run tests
-        run: |
-          sf project deploy start \
-            --metadata-dir force-app \     # change only if your source lives elsewhere
-            --target-org testOrg \
-            --dry-run \                    # = old --check-only
-            --test-level RunLocalTests \
-            --json
+        run: sf project deploy start --source-dir force-app \
+                                     --target-org testOrg \       
+                                     --test-level RunLocalTests \
+                                     --check-only
