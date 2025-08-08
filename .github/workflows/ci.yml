@@ -45,6 +45,4 @@ jobs:
             -d force-app \
             -o testOrg \
             --dry-run \
-            --test-level RunLocalTests \
-            --coverage-format text
-            
+            --test-level RunLocalTests
