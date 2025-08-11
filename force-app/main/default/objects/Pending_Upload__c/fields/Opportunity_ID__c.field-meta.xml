@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opportunity_ID__c</fullName>
+    <description>Optional link to the related Opportunity.</description>
+    <label>Opportunity ID</label>
+    <referenceTo>Opportunity</referenceTo>
+    <relationshipLabel>Pending Uploads</relationshipLabel>
+    <relationshipName>Pending_Uploads_Opportunity</relationshipName>
+    <required>false</required>
+    <type>Lookup</type>
+</CustomField>

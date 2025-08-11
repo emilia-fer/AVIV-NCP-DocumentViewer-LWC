@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status__c</fullName>
+    <description>Lifecycle of the pending upload.</description>
+    <externalId>false</externalId>
+    <label>Status</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Queued</fullName>
+                <default>true</default>
+                <label>Queued</label>
+            </value>
+            <value>
+                <fullName>Needs_User_Upload</fullName>
+                <label>Needs User Upload</label>
+            </value>
+            <value>
+                <fullName>Uploaded</fullName>
+                <label>Uploaded</label>
+            </value>
+            <value>
+                <fullName>Failed</fullName>
+                <label>Failed</label>
+            </value>
+            <value>
+                <fullName>Skipped</fullName>
+                <label>Skipped</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
