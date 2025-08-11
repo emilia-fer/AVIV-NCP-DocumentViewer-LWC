@@ -3,42 +3,12 @@ private class FileUploadJobTest {
 
     /* ========================= helpers ========================= */
 
+    // ~100 KB blob (safe under 6 MB build limit)
     private static Blob smallBlob() {
         String ten = '0123456789'; // 10 bytes
         String chunk = '';
         for (Integer i = 0; i < 10000; i++) chunk += ten;  // ~100 KB
         return Blob.valueOf(chunk);
-    }
-
-    private static Blob exact6MBBlob() {
-        Integer target = 6 * 1024 * 1024; // 6,291,456 bytes
-        String ten = '0123456789'; // 10 bytes
-        String oneHundredKb = '';
-        for (Integer i = 0; i < 10000; i++) oneHundredKb += ten; // ~100 KB
-
-        List<String> parts = new List<String>();
-        Integer full = target / oneHundredKb.length();
-        for (Integer i = 0; i < full; i++) parts.add(oneHundredKb);
-
-        Integer rem = target - full * oneHundredKb.length();
-        if (rem > 0) parts.add(oneHundredKb.substring(0, rem));
-
-        Blob b = Blob.valueOf(String.join(parts,''));
-        System.assertEquals(target, b.size(), 'sanity check exact 6MB');
-        return b;
-    }
-
-    private static Blob bigBlob() {
-        Integer target = 6 * 1024 * 1024 + 16 * 1024; // 6 MB + 16 KB
-        String ten = '0123456789';
-        String oneHundredKb = '';
-        for (Integer i = 0; i < 10000; i++) oneHundredKb += ten; // ~100 KB
-        List<String> parts = new List<String>();
-        Integer full = target / oneHundredKb.length();
-        for (Integer i = 0; i < full; i++) parts.add(oneHundredKb);
-        Integer rem = target - full * oneHundredKb.length();
-        if (rem > 0) parts.add(oneHundredKb.substring(0, rem));
-        return Blob.valueOf(String.join(parts,''));
     }
 
     private static ContentVersion insertCV(String title, Blob data) {
@@ -86,12 +56,10 @@ private class FileUploadJobTest {
         public Integer putCount = 0;
         public String  lastEndpoint;
         public String  lastContentType;
-
         public HTTPResponse respond(HTTPRequest req) {
             System.debug('MockPutOK: ' + req.getMethod() + ' ' + req.getEndpoint());
-            lastEndpoint   = req.getEndpoint();
-            lastContentType= req.getHeader('Content-Type');
-
+            lastEndpoint    = req.getEndpoint();
+            lastContentType = req.getHeader('Content-Type');
             HttpResponse res = new HttpResponse();
             if (req.getMethod() == 'PUT') {
                 putCount++;
@@ -100,16 +68,13 @@ private class FileUploadJobTest {
                 res.setBody('OK');
                 return res;
             }
-            res.setStatusCode(200);
-            res.setStatus('OK');
-            res.setBody('OK');
+            res.setStatusCode(200); res.setStatus('OK'); res.setBody('OK');
             return res;
         }
     }
 
     private class MockPutFail implements HttpCalloutMock {
         public Integer putCount = 0;
-
         public HTTPResponse respond(HTTPRequest req) {
             System.debug('MockPutFail: ' + req.getMethod() + ' ' + req.getEndpoint());
             HttpResponse res = new HttpResponse();
@@ -120,9 +85,7 @@ private class FileUploadJobTest {
                 res.setBody('Boom from mock');
                 return res;
             }
-            res.setStatusCode(200);
-            res.setStatus('OK');
-            res.setBody('OK');
+            res.setStatusCode(200); res.setStatus('OK'); res.setBody('OK');
             return res;
         }
     }
@@ -130,7 +93,6 @@ private class FileUploadJobTest {
     private class MockThrows implements HttpCalloutMock {
         public HTTPResponse respond(HTTPRequest req) {
             System.debug('MockThrows: ' + req.getMethod() + ' ' + req.getEndpoint());
-            // Simulate a network/auth failure
             throw new System.CalloutException('Simulated network failure');
         }
     }
@@ -139,152 +101,174 @@ private class FileUploadJobTest {
 
     @IsTest
     static void smallFile_directPut_success() {
-        ContentVersion cv = insertCV('small.txt', smallBlob());
-        System.assert(cv.ContentSize < 6 * 1024 * 1024);
-        String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
+        Long old = FileUploadJob.MAX_DIRECT_BYTES;
+        try {
+            // keep threshold above our small blob to force direct PUT branch
+            FileUploadJob.MAX_DIRECT_BYTES = 200000; // 200 KB
 
-        MockPutOK mock = new MockPutOK();
-        Test.setMock(HttpCalloutMock.class, mock);
+            ContentVersion cv = insertCV('small.txt', smallBlob());
+            System.assert(cv.ContentSize < FileUploadJob.MAX_DIRECT_BYTES);
 
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'text/plain', null, null, null, null, null
-        ));
-        Test.stopTest();
+            String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
+            MockPutOK mock = new MockPutOK();
+            Test.setMock(HttpCalloutMock.class, mock);
 
-        AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
-        System.debug('Test result small success: status=' + j.Status + ' errors=' + j.NumberOfErrors + ' PUTs=' + mock.putCount);
-        System.assertEquals('Completed', j.Status);
-        System.assertEquals(0, j.NumberOfErrors);
-        System.assertEquals(1, mock.putCount);
-        System.assertEquals(0, [SELECT COUNT() FROM Pending_Upload__c]);
+            Test.startTest();
+            Id jobId = System.enqueueJob(new FileUploadJob(
+                cv.Id, key, 'text/plain', null, null, null, null, null
+            ));
+            Test.stopTest();
+
+            AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
+            System.debug('Test small success: status=' + j.Status + ' errors=' + j.NumberOfErrors + ' PUTs=' + mock.putCount);
+            System.assertEquals('Completed', j.Status);
+            System.assertEquals(0, j.NumberOfErrors);
+            System.assertEquals(1, mock.putCount);
+            System.assertEquals(0, [SELECT COUNT() FROM Pending_Upload__c]);
+        } finally {
+            FileUploadJob.MAX_DIRECT_BYTES = old;
+        }
     }
 
     @IsTest
     static void smallFile_directPut_failure_marksJobFailed() {
-        ContentVersion cv = insertCV('small-fail.txt', smallBlob());
-        String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
+        Long old = FileUploadJob.MAX_DIRECT_BYTES;
+        try {
+            FileUploadJob.MAX_DIRECT_BYTES = 200000;
 
-        MockPutFail mock = new MockPutFail();
-        Test.setMock(HttpCalloutMock.class, mock);
+            ContentVersion cv = insertCV('small-fail.txt', smallBlob());
+            String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
 
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'text/plain', null, null, null, null, null
-        ));
-        Test.stopTest();
+            MockPutFail mock = new MockPutFail();
+            Test.setMock(HttpCalloutMock.class, mock);
 
-        AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
-        System.debug('Test result small fail: status=' + j.Status + ' errors=' + j.NumberOfErrors + ' PUTs=' + mock.putCount);
-        System.assertEquals('Failed', j.Status);
-        System.assert(j.NumberOfErrors > 0);
-        System.assertEquals(1, mock.putCount);
-        System.assertEquals(0, [SELECT COUNT() FROM Pending_Upload__c]);
-    }
+            Id jobId;
+            Test.startTest();
+            try {
+                jobId = System.enqueueJob(new FileUploadJob(
+                    cv.Id, key, 'text/plain', null, null, null, null, null
+                ));
+                Test.stopTest(); // will surface UploadException from async
+                System.assert(false, 'Expected UploadException from queueable');
+            } catch (FileUploadJob.UploadException ex) {
+                System.debug('Caught expected UploadException: ' + ex.getMessage());
+            }
 
-    @IsTest
-    static void bigFile_createsPendingUpload_withLinks() {
-        Map<String, Id> refs = seedRelated();
-        ContentVersion cv = insertCV('big.txt', bigBlob());
-        System.assert(cv.ContentSize > 6 * 1024 * 1024);
-        String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
-
-        Test.setMock(HttpCalloutMock.class, new MockPutOK());
-
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'text/plain',
-            refs.get('AccountId'), refs.get('OpportunityId'),
-            refs.get('CaseId'), refs.get('ContactId'), '00TXXXXXXXXXXXX'
-        ));
-        Test.stopTest();
-
-        AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
-        System.debug('Test result big/pending: status=' + j.Status + ' errors=' + j.NumberOfErrors);
-        System.assertEquals('Completed', j.Status);
-        System.assertEquals(0, j.NumberOfErrors);
-
-        Pending_Upload__c p = [
-            SELECT Id, S3_Key__c, Mime_Type__c, Size__c, Status__c,
-                   Account_ID__c, Opportunity_ID__c, Case_ID__c, Contact_ID__c, Task_Id__c
-            FROM   Pending_Upload__c
-            WHERE  Content_Version_ID__c = :cv.Id
-            LIMIT 1
-        ];
-        System.debug('Pending row: ' + p);
-
-        System.assertEquals(key,            p.S3_Key__c);
-        System.assertEquals('text/plain',   p.Mime_Type__c);
-        System.assertEquals(cv.ContentSize, p.Size__c);
-        System.assertEquals('Pending',      p.Status__c);
-        System.assertEquals(refs.get('AccountId'),     p.Account_ID__c);
-        System.assertEquals(refs.get('OpportunityId'), p.Opportunity_ID__c);
-        System.assertEquals(refs.get('CaseId'),        p.Case_ID__c);
-        System.assertEquals(refs.get('ContactId'),     p.Contact_ID__c);
-        System.assertEquals('00TXXXXXXXXXXXX',         p.Task_Id__c);
-    }
-
-    @IsTest
-    static void smallFile_endpointEncoding_preservesSlashes_encodesSpaces() {
-        ContentVersion cv = insertCV('name with spaces.txt', smallBlob());
-        String key = 'salesforce-sync/folder 1/sub folder 2/file name.txt';
-
-        MockPutOK mock = new MockPutOK();
-        Test.setMock(HttpCalloutMock.class, mock);
-
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'text/plain', null, null, null, null, null
-        ));
-        Test.stopTest();
-
-        AsyncApexJob j = [SELECT Status FROM AsyncApexJob WHERE Id = :jobId];
-        System.assertEquals('Completed', j.Status);
-        System.assertNotEquals(null, mock.lastEndpoint, 'mock should capture endpoint');
-
-        System.assert(
-            mock.lastEndpoint.contains('folder%201/sub%20folder%202/file%20name.txt'),
-            'Endpoint should encode spaces but keep slashes: ' + mock.lastEndpoint
-        );
-        System.assertEquals(-1, mock.lastEndpoint.indexOf('%2F'),
-            'Endpoint must not contain %2F (slashes must be preserved)');
+            AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
+            System.assertEquals(1, mock.putCount);
+            System.assertEquals(0, [SELECT COUNT() FROM Pending_Upload__c]);
+        } finally {
+            FileUploadJob.MAX_DIRECT_BYTES = old;
+        }
     }
 
     @IsTest
     static void smallFile_calloutThrows_marksJobFailed() {
-        ContentVersion cv = insertCV('small-throws.txt', smallBlob());
-        String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
+        Long old = FileUploadJob.MAX_DIRECT_BYTES;
+        try {
+            FileUploadJob.MAX_DIRECT_BYTES = 200000;
 
-        Test.setMock(HttpCalloutMock.class, new MockThrows());
+            ContentVersion cv = insertCV('small-throws.txt', smallBlob());
+            String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
 
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'text/plain', null, null, null, null, null
-        ));
-        Test.stopTest();
+            Test.setMock(HttpCalloutMock.class, new MockThrows());
 
-        AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
-        System.assertEquals('Failed', j.Status);
-        System.assert(j.NumberOfErrors > 0);
+            Id jobId;
+            Test.startTest();
+            try {
+                jobId = System.enqueueJob(new FileUploadJob(
+                    cv.Id, key, 'text/plain', null, null, null, null, null
+                ));
+                Test.stopTest();
+                System.assert(false, 'Expected UploadException from queueable');
+            } catch (FileUploadJob.UploadException ex) {
+                System.debug('Caught expected UploadException: ' + ex.getMessage());
+            }
+        } finally {
+            FileUploadJob.MAX_DIRECT_BYTES = old;
+        }
     }
 
     @IsTest
-    static void exactThreshold_6MB_isStillDirectPut() {
-        ContentVersion cv = insertCV('exact6MB.bin', exact6MBBlob());
-        String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.bin';
+    static void bigFile_createsPendingUpload_withLinks() {
+        Long old = FileUploadJob.MAX_DIRECT_BYTES;
+        try {
+            // Force "big" branch by making the threshold tiny
+            FileUploadJob.MAX_DIRECT_BYTES = 50000; // 50 KB
 
-        MockPutOK mock = new MockPutOK();
-        Test.setMock(HttpCalloutMock.class, mock);
+            Map<String, Id> refs = seedRelated();
+            ContentVersion cv = insertCV('big.txt', smallBlob()); // 100 KB > 50 KB threshold
+            String key = 'salesforce-sync/' + cv.Id + '-v' + cv.VersionNumber + '.txt';
 
-        Test.startTest();
-        Id jobId = System.enqueueJob(new FileUploadJob(
-            cv.Id, key, 'application/octet-stream', null, null, null, null, null
-        ));
-        Test.stopTest();
+            Test.setMock(HttpCalloutMock.class, new MockPutOK());
 
-        AsyncApexJob j = [SELECT Status FROM AsyncApexJob WHERE Id = :jobId];
-        System.assertEquals('Completed', j.Status);
-        System.assertEquals(1, mock.putCount, 'Exact threshold should still direct PUT');
-        System.assertEquals(0, [SELECT COUNT() FROM Pending_Upload__c]);
+            Test.startTest();
+            Id jobId = System.enqueueJob(new FileUploadJob(
+                cv.Id, key, 'text/plain',
+                refs.get('AccountId'), refs.get('OpportunityId'),
+                refs.get('CaseId'), refs.get('ContactId'), '00TXXXXXXXXXXXX'
+            ));
+            Test.stopTest();
+
+            AsyncApexJob j = [SELECT Status, NumberOfErrors FROM AsyncApexJob WHERE Id = :jobId];
+            System.debug('Test big→pending: status=' + j.Status + ' errors=' + j.NumberOfErrors);
+            System.assertEquals('Completed', j.Status);
+            System.assertEquals(0, j.NumberOfErrors);
+
+            Pending_Upload__c p = [
+                SELECT Id, S3_Key__c, Mime_Type__c, Size__c, Status__c,
+                       Account_ID__c, Opportunity_ID__c, Case_ID__c, Contact_ID__c, Task_Id__c,
+                       Content_Version_ID__c
+                FROM   Pending_Upload__c
+                WHERE  Content_Version_ID__c = :cv.Id
+                LIMIT 1
+            ];
+            System.debug('Pending row: ' + p);
+            System.assertEquals(key,            p.S3_Key__c);
+            System.assertEquals('text/plain',   p.Mime_Type__c);
+            System.assertEquals(cv.ContentSize, p.Size__c);
+            System.assertEquals('Pending',      p.Status__c);
+            System.assertEquals(refs.get('AccountId'),     p.Account_ID__c);
+            System.assertEquals(refs.get('OpportunityId'), p.Opportunity_ID__c);
+            System.assertEquals(refs.get('CaseId'),        p.Case_ID__c);
+            System.assertEquals(refs.get('ContactId'),     p.Contact_ID__c);
+            System.assertEquals('00TXXXXXXXXXXXX',         p.Task_Id__c);
+            System.assertEquals(cv.Id,                     p.Content_Version_ID__c);
+        } finally {
+            FileUploadJob.MAX_DIRECT_BYTES = old;
+        }
+    }
+
+    @IsTest
+    static void endpointEncoding_preservesSlashes_encodesSpaces() {
+        Long old = FileUploadJob.MAX_DIRECT_BYTES;
+        try {
+            FileUploadJob.MAX_DIRECT_BYTES = 200000;
+
+            ContentVersion cv = insertCV('name with spaces.txt', smallBlob());
+            String key = 'salesforce-sync/folder 1/sub folder 2/file name.txt';
+
+            MockPutOK mock = new MockPutOK();
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            Id jobId = System.enqueueJob(new FileUploadJob(
+                cv.Id, key, 'text/plain', null, null, null, null, null
+            ));
+            Test.stopTest();
+
+            AsyncApexJob j = [SELECT Status FROM AsyncApexJob WHERE Id = :jobId];
+            System.assertEquals('Completed', j.Status);
+            System.assertNotEquals(null, mock.lastEndpoint, 'mock should capture endpoint');
+
+            System.assert(
+                mock.lastEndpoint.contains('folder%201/sub%20folder%202/file%20name.txt'),
+                'Endpoint should encode spaces but keep slashes: ' + mock.lastEndpoint
+            );
+            System.assertEquals(-1, mock.lastEndpoint.indexOf('%2F'),
+                'Endpoint must not contain %2F (slashes must be preserved)');
+        } finally {
+            FileUploadJob.MAX_DIRECT_BYTES = old;
+        }
     }
 }

@@ -4,7 +4,8 @@
 public with sharing class FileUploadJob implements Queueable, Database.AllowsCallouts {
 
     /* ---------- tweakables ---------- */
-    private static final Long   MAX_DIRECT_BYTES = 6L * 1024L * 1024L; // 6 MB
+	@TestVisible
+    static Long   MAX_DIRECT_BYTES = 6L * 1024L * 1024L; // 6 MB
     private static final String S3_NC            = 'AWS_S3';           // Named Credential
     private static final Integer TIMEOUT         = 30000;              // 30 s
 
@@ -102,7 +103,7 @@ public with sharing class FileUploadJob implements Queueable, Database.AllowsCal
                         ', body=' + (body == null ? '' : body)
                     );
                 }
-                System.debug('✅ File ' + s3Key + ' uploaded directly (' + cv.ContentSize + ' bytes)');
+                System.debug('File ' + s3Key + ' uploaded directly (' + cv.ContentSize + ' bytes)');
                 return;
 
             } catch (Exception e) {
@@ -130,7 +131,7 @@ public with sharing class FileUploadJob implements Queueable, Database.AllowsCal
         );
         insert p;
 
-        System.debug('➕ Deferred big file – Pending_Upload__c Id ' + p.Id);
+        System.debug('Deferred big file – Pending_Upload__c Id ' + p.Id);
     }
 
     public class UploadException extends Exception{}
