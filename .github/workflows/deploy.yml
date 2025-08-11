@@ -34,6 +34,9 @@ jobs:
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sf org login sfdx-url --sfdx-url-file auth-url.txt --alias deployOrg --json
 
+      - name: Who am I?
+        run: aws sts get-caller-identity
+
       # ── E.  Build a one-off package.xml from everything in force-app ───────
       - name: Generate manifest
         run: |
@@ -69,6 +72,7 @@ jobs:
 
       - run: sam build
       - run: |
+          set -x
           sam deploy \
           --stack-name doc-viewer \
           --s3-bucket avivdocdev \
@@ -77,4 +81,3 @@ jobs:
           --capabilities CAPABILITY_IAM \
           --no-confirm-changeset \
           --no-fail-on-empty-changeset
-          --role-arn arn:aws:iam::992382709732:role/doc-viewer-cfn-exec
