@@ -72,8 +72,8 @@ jobs:
           sam deploy \
           --stack-name doc-viewer \
           --s3-bucket avivdocdev \
-          --no-resolve-s3 \
           --region eu-north-1 \
           --capabilities CAPABILITY_IAM \
           --no-confirm-changeset \
-          --no-fail-on-empty-changeset
+          --no-fail-on-empty-changeset \
+          --role-arn arn:aws:iam::992382709732:role/doc-viewer-cfn-exec
