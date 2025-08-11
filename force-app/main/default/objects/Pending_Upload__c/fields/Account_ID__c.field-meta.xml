@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account_ID__c</fullName>
+    <description>Optional link to the related Account.</description>
+    <externalId>false</externalId>
+    <label>Account ID</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Pending Uploads</relationshipLabel>
+    <relationshipName>Pending_Uploads_Account</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
