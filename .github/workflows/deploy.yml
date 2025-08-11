@@ -33,10 +33,7 @@ jobs:
         run: |
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sf org login sfdx-url --sfdx-url-file auth-url.txt --alias deployOrg --json
-
-      - name: Who am I?
-        run: aws sts get-caller-identity
-
+          
       # ── E.  Build a one-off package.xml from everything in force-app ───────
       - name: Generate manifest
         run: |
