@@ -2,116 +2,128 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Serverless stack for the S3 Doc Viewer Lambdas
 
+Parameters:
+  BucketName:
+    Type: String
+    Default: avivdocdev
+    Description: S3 bucket that stores documents
+
 Resources:
+  # -------------------- Explicit IAM roles (stable) --------------------
+  GeneratePresignExecRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+        - PolicyName: S3AccessForPresign
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Technically presign doesn’t need S3 access, but it’s fine to allow
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub arn:aws:s3:::${BucketName}/*
+
+  MsgToEmlExecRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+        - PolicyName: S3ReadForMsg
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::${BucketName}
+                  - !Sub arn:aws:s3:::${BucketName}/*
+
+  # ----------------------------- Functions -----------------------------
   GenerateS3PresignedUrl:
     Type: AWS::Serverless::Function
+    DependsOn: GeneratePresignExecRole
     Properties:
-      CodeUri: lambda/GenerateS3PresignedUrl/src
+      CodeUri: lambda/GenerateS3PresignedUrl/src   # <— adjust if your path differs
       Description: Generates pre-signed S3 URLs for uploads and downloads
-      MemorySize: 128
-      Timeout: 3
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
-      Architectures:
-        - x86_64
-      EphemeralStorage:
-        Size: 512
+      Architectures: [ x86_64 ]
+      MemorySize: 128
+      Timeout: 5
+      Role: !GetAtt GeneratePresignExecRole.Arn
       Environment:
         Variables:
-          BUCKET: avivdocdev
-      EventInvokeConfig:
-        MaximumEventAgeInSeconds: 21600
-        MaximumRetryAttempts: 2
-      PackageType: Zip
-      Policies:
-        - Statement:
-            - Sid: AllowS3PutOnly
-              Effect: Allow
-              Action:
-                - s3:PutObject
-              Resource: arn:aws:s3:::avivdocdev/*
-            - Sid: AllowBasicLambdaLogging
-              Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-              Resource: '*'
-      RecursiveLoop: Terminate
-      SnapStart:
-        ApplyOn: None
+          BUCKET: !Ref BucketName
       Events:
-        Api1:
+        PresignPut:
           Type: Api
           Properties:
             Path: /generate-presigned-url
-            Method: ANY
-        Api2:
+            Method: POST
+        PresignGet:
           Type: Api
           Properties:
             Path: /generate-presigned-get-url
-            Method: ANY
-      RuntimeManagementConfig:
-        UpdateRuntimeOn: Auto
+            Method: POST
 
   MsgToEml:
     Type: AWS::Serverless::Function
+    DependsOn: MsgToEmlExecRole
     Properties:
-      CodeUri: lambda/MsgToEml/src
+      CodeUri: lambda/MsgToEml/src                  # <— adjust if your path differs
       Description: Converts .msg email files to HTML and attachments
-      MemorySize: 256
-      Timeout: 60
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
-      Architectures:
-        - x86_64
-      EphemeralStorage:
-        Size: 512
+      Architectures: [ x86_64 ]
+      MemorySize: 256
+      Timeout: 60
+      Role: !GetAtt MsgToEmlExecRole.Arn
       Environment:
         Variables:
-          TARGET_BUCKET: avivdocdev
-      EventInvokeConfig:
-        MaximumEventAgeInSeconds: 21600
-        MaximumRetryAttempts: 2
-      PackageType: Zip
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-              Resource: arn:aws:logs:eu-north-1:992382709732:*
-            - Effect: Allow
-              Action:
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-              Resource:
-                - arn:aws:logs:eu-north-1:992382709732:log-group:/aws/lambda/MsgToEml:*
-            - Sid: ReadOnlySpecificBucket
-              Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-              Resource:
-                - arn:aws:s3:::avivdocdev
-                - arn:aws:s3:::avivdocdev/*
-      RecursiveLoop: Terminate
-      SnapStart:
-        ApplyOn: None
+          TARGET_BUCKET: !Ref BucketName
       Events:
-        Api1:
-          Type: Api
-          Properties:
-            Path: /MyResource
-            Method: ANY
-        Api2:
+        Convert:
           Type: Api
           Properties:
             Path: /convert
-            Method: ANY
-      RuntimeManagementConfig:
-        UpdateRuntimeOn: Auto
+            Method: POST
 
 Outputs:
   ApiUrl:
-    Description: API Gateway endpoint URL for Prod stage
+    Description: API Gateway endpoint URL for the default stage
     Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
