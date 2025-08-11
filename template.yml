@@ -41,7 +41,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       # Use the pre-created execution role (do NOT create roles in this stack)
-      Role: arn:aws:iam::992382709732:role/MsgToEml-role-8w9n0xf0
+      Role: arn:aws:iam::992382709732:role/service-role/MsgToEml-role-8w9n0xf0
       CodeUri: lambda/MsgToEml/src
       Description: Converts .msg email files to HTML and attachments
       Handler: lambda_function.lambda_handler
