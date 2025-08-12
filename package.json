@@ -7,6 +7,7 @@
     "lint": "eslint force-app/main/default/lwc --ext .js",
     "format": "prettier \"{force-app,docs}/**/*.{js,css,html,md,json}\" --write",
     "test": "sfdx-lwc-jest",
+    "test:coverage": "sfdx-lwc-jest --coverage",
     "coverage:md": "npm test -- --coverage -- --coverageReporters=json-summary && node scripts/generateCoverageMd.js"
   },
   "devDependencies": {

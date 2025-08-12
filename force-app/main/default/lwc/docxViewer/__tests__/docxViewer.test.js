@@ -1,4 +1,5 @@
 import { createElement } from 'lwc';
+import { setImmediate } from 'timers';
 import DocxViewer from 'c/docxViewer';
 import { loadScript } from 'lightning/platformResourceLoader';
 
@@ -8,7 +9,7 @@ jest.mock('lightning/platformResourceLoader', () => ({
 
 jest.mock('@salesforce/resourceUrl/mammoth', () => '/mammoth', { virtual: true });
 
-const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
+const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 describe('c-docx-viewer', () => {
     let fetchMock;
@@ -43,7 +44,9 @@ describe('c-docx-viewer', () => {
         expect(loadScript).toHaveBeenCalled();
         expect(fetchMock).toHaveBeenCalledWith('test-url');
         const container = element.shadowRoot.querySelector('.docxContainer');
-        expect(container.innerHTML).toBe(htmlResult.value);
+        const paragraph = container.querySelector('p');
+        expect(paragraph).not.toBeNull();
+        expect(paragraph.textContent).toBe('hello');
         expect(element.src).toBe('test-url');
     });
 
@@ -69,7 +72,9 @@ describe('c-docx-viewer', () => {
 
         expect(fetchMock).toHaveBeenCalledWith('early');
         const container = element.shadowRoot.querySelector('.docxContainer');
-        expect(container.innerHTML).toBe('<p>done</p>');
+        const paragraph = container.querySelector('p');
+        expect(paragraph).not.toBeNull();
+        expect(paragraph.textContent).toBe('done');
     });
 
     it('handles errors from mammoth conversion', async () => {
@@ -87,7 +92,7 @@ describe('c-docx-viewer', () => {
 
         expect(errorSpy).toHaveBeenCalled();
         const container = element.shadowRoot.querySelector('.docxContainer');
-        expect(container.innerHTML).toContain('DOCX preview failed');
+        expect(container.textContent).toContain('DOCX preview failed');
         errorSpy.mockRestore();
     });
 

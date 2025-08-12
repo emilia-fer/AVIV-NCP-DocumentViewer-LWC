@@ -110,4 +110,84 @@ describe('s3DocViewer class helpers', () => {
         mockThis.showExtended = false;
         expect(columnsGetter.call(mockThis).length).toBe(5);
     });
+
+    it('safeMessage handles various error shapes', () => {
+        const fn = S3DocViewer.prototype.safeMessage;
+        expect(fn.call({})).toBe('Unknown error');
+        expect(fn.call({}, { body: { message: 'oops' } })).toBe('oops');
+        expect(fn.call({}, { body: 'raw' })).toBe('raw');
+        expect(fn.call({}, { message: 'msg' })).toBe('msg');
+        const obj = { foo: 'bar' };
+        expect(fn.call({}, obj)).toBe(JSON.stringify(obj));
+    });
+
+    it('base64 helpers convert and decode correctly', () => {
+        const base = Buffer.from('ABC').toString('base64');
+        const bytes = S3DocViewer.prototype.base64ToBytes.call({}, base);
+        expect(Array.from(bytes)).toEqual([65, 66, 67]);
+        const utf = Buffer.from('Hello µWorld', 'utf8').toString('base64');
+        const decoded = S3DocViewer.prototype.decodeUtf8.call({}, utf);
+        expect(decoded).toBe('Hello µWorld');
+    });
+
+    it('makeBlobUrl creates blob URLs and stores reference', () => {
+        const createSpy = jest.fn(() => 'blob:test');
+        const revokeSpy = jest.fn();
+        global.URL.createObjectURL = createSpy;
+        global.URL.revokeObjectURL = revokeSpy;
+        const ctx = { base64ToBytes: S3DocViewer.prototype.base64ToBytes };
+        const b64 = Buffer.from('data').toString('base64');
+        const url = S3DocViewer.prototype.makeBlobUrl.call(ctx, b64, 'text/plain');
+        expect(createSpy).toHaveBeenCalled();
+        expect(url).toBe('blob:test');
+        expect(ctx._blobUrl).toBe('blob:test');
+    });
+
+    it('sortFunc sorts numeric and string fields', () => {
+        const arr = [{ a: 2 }, { a: 1 }];
+        arr.sort(S3DocViewer.prototype.sortFunc.call({}, 'a', 'asc'));
+        expect(arr[0].a).toBe(1);
+        const str = [{ a: 'b' }, { a: 'a' }];
+        str.sort(S3DocViewer.prototype.sortFunc.call({}, 'a', 'desc'));
+        expect(str[0].a).toBe('b');
+    });
+
+    it('upload preview mime getters detect types', () => {
+        const imgCtx = { uploadPreviewMime: 'image/png' };
+        const pdfCtx = { uploadPreviewMime: 'application/pdf' };
+        const docxCtx = {
+            uploadPreviewMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        };
+        const imgGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'isUploadPreviewImage').get;
+        const pdfGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'isUploadPreviewPdf').get;
+        const docxGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'isUploadPreviewDocx').get;
+        expect(imgGetter.call(imgCtx)).toBe(true);
+        expect(pdfGetter.call(pdfCtx)).toBe(true);
+        expect(docxGetter.call(docxCtx)).toBe(true);
+    });
+
+    it('filteredRows applies name and description filters', () => {
+        const ctx = {
+            docs: [
+                { Name: 'Alpha', Description__c: 'First' },
+                { Name: 'Beta', Description__c: 'Second' }
+            ],
+            nameKey: 'a',
+            nameMode: 'starts',
+            descKey: 'first',
+            descMode: 'contains',
+            typeFilter: 'all',
+            searchKey: '',
+            yearFrom: undefined,
+            yearTo: undefined,
+            dateFrom: undefined,
+            dateTo: undefined,
+            sizeMin: undefined,
+            sizeMax: undefined
+        };
+        const getter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'filteredRows').get;
+        const result = getter.call(ctx);
+        expect(result.length).toBe(1);
+        expect(result[0].Name).toBe('Alpha');
+    });
 });
