@@ -1,79 +1,130 @@
+// scripts/generateCoverageMd.js
 const fs = require('fs');
 const path = require('path');
 
-const coverageDir = path.join(__dirname, '..', 'coverage');
-const coveragePath = path.join(coverageDir, 'coverage-summary.json');
-const outputPath = path.join(__dirname, '..', 'docs', 'code-coverage.md');
+const root = path.join(__dirname, '..');
+const coverageDir = path.join(root, 'coverage');
+const jestSummaryPath = path.join(coverageDir, 'coverage-summary.json');
+const apexDir = path.join(coverageDir, 'apex');
+const mdOut = path.join(root, 'docs', 'code-coverage.md');
+const svgOut = path.join(root, 'docs', 'coverage-progress.svg');
 
-if (!fs.existsSync(coveragePath)) {
-  console.error('Coverage summary not found. Run tests with coverage first.');
+function fail(msg) {
+  console.error(msg);
   process.exit(1);
 }
 
-const summary = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
-const totalPct =
+if (!fs.existsSync(jestSummaryPath)) {
+  fail('Coverage summary not found. Run tests with coverage first.');
+}
+
+const jestSummary = JSON.parse(fs.readFileSync(jestSummaryPath, 'utf8'));
+const overallPct =
   parseFloat(
-    summary.total?.statements?.pct ?? summary.total?.lines?.pct ?? 0
+    jestSummary.total?.statements?.pct ?? jestSummary.total?.lines?.pct ?? 0
   ) || 0;
 
-function findApexCoverage(dir) {
-  const candidate = path.join(dir, 'test-result-codecoverage.json');
-  if (fs.existsSync(candidate)) return candidate;
+// ---------- make a local SVG progress bar ----------
+function makeProgressSvg(pct) {
+  const width = 500, height = 16, radius = 8;
+  const pctRounded = Math.max(0, Math.min(100, Math.round(pct)));
+  const fillWidth = Math.round((pctRounded / 100) * width);
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" role="img" aria-label="Coverage ${pctRounded}%">
+  <defs>
+    <clipPath id="r">
+      <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect x="0" y="0" width="${width}" height="${height}" fill="#e6e6e6"/>
+    <rect x="0" y="0" width="${fillWidth}" height="${height}" fill="#3fb950"/>
+  </g>
+</svg>`.trim();
+}
+
+fs.writeFileSync(svgOut, makeProgressSvg(overallPct), 'utf8');
+
+// ---------- find Apex coverage ----------
+function findFiles(dir, names) {
+  const out = [];
+  if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      const found = findApexCoverage(path.join(dir, entry.name));
-      if (found) return found;
-    }
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...findFiles(p, names));
+    else if (names.includes(entry.name)) out.push(p);
   }
-  return null;
+  return out;
 }
 
 function extractApexCoverages(obj) {
   if (!obj || typeof obj !== 'object') return [];
-  if (Array.isArray(obj)) return obj.flatMap(extractApexCoverages);
+  const results = [];
 
-  const collections = [];
-  for (const key of ['codeCoverage', 'codecoverage', 'coverage']) {
-    const val = obj[key];
-    if (Array.isArray(val)) collections.push(val);
-    else if (val && Array.isArray(val.coverage)) collections.push(val.coverage);
+  // Common shapes:
+  // 1) test-result-codecoverage.json -> array of { name, percentage | coveredPercent | numLocationsCovered/numLocations }
+  // 2) test-result.json -> { codecoverage: [ { apexClassOrTriggerName, coveredPercent } ] }
+  const arrays = [];
+  if (Array.isArray(obj)) arrays.push(obj);
+  if (Array.isArray(obj.codecoverage)) arrays.push(obj.codecoverage);
+  if (Array.isArray(obj.coverage)) arrays.push(obj.coverage);
+  if (Array.isArray(obj.codeCoverage)) arrays.push(obj.codeCoverage);
+
+  for (const arr of arrays) {
+    for (const c of arr) {
+      const name =
+        c.name ||
+        c.apexClassOrTriggerName ||
+        c.ApexClassOrTriggerName ||
+        c.apexClassName ||
+        c.className;
+      if (!name) continue;
+
+      const pct =
+        (c.percentage !== undefined && parseFloat(c.percentage)) ||
+        (c.coveredPercent !== undefined && parseFloat(c.coveredPercent)) ||
+        (c.NumLocationsCovered !== undefined && c.NumLocations !== undefined
+          ? (Number(c.NumLocationsCovered) / Number(c.NumLocations)) * 100
+          : c.numLocationsCovered !== undefined && c.numLocations !== undefined
+          ? (Number(c.numLocationsCovered) / Number(c.numLocations)) * 100
+          : 0);
+
+      results.push({ name, pct: Number(pct) || 0 });
+    }
   }
 
-  return collections.flat().concat(
-    Object.values(obj).flatMap(extractApexCoverages)
-  );
+  // Recurse other properties for nested objects
+  for (const v of Object.values(obj)) {
+    if (v && typeof v === 'object') results.push(...extractApexCoverages(v));
+  }
+
+  // De-dup by name (keep max pct)
+  const byName = new Map();
+  for (const r of results) {
+    const current = byName.get(r.name);
+    if (!current || r.pct > current.pct) byName.set(r.name, r);
+  }
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const apexCoveragePath = findApexCoverage(coverageDir);
 let apexCoverages = [];
-if (apexCoveragePath && fs.existsSync(apexCoveragePath)) {
+const apexFiles = [
+  ...findFiles(apexDir, ['test-result-codecoverage.json']),
+  ...findFiles(apexDir, ['test-result.json'])
+];
+
+for (const f of apexFiles) {
   try {
-    const apexRaw = JSON.parse(fs.readFileSync(apexCoveragePath, 'utf8'));
-    const entries = extractApexCoverages(apexRaw);
-    apexCoverages = entries
-      .map((c) => {
-        const total =
-          c.numLocations ??
-          (Array.isArray(c.coveredLines) && Array.isArray(c.uncoveredLines)
-            ? c.coveredLines.length + c.uncoveredLines.length
-            : undefined);
-        const covered =
-          c.numLocationsCovered ??
-          (Array.isArray(c.coveredLines) ? c.coveredLines.length : undefined);
-        const pct =
-          c.percentage !== undefined
-            ? parseFloat(c.percentage)
-            : total
-            ? (covered / total) * 100
-            : 0;
-        return { name: c.name || c.apexClassOrTriggerName, pct };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const obj = JSON.parse(fs.readFileSync(f, 'utf8'));
+    apexCoverages = extractApexCoverages(obj);
+    if (apexCoverages.length) break;
   } catch (e) {
-    console.warn('Failed to parse Apex coverage:', e.message);
+    // ignore and try next
   }
 }
 
+// ---------- utility ----------
 function coverageColor(pct) {
   if (pct >= 90) return 'brightgreen';
   if (pct >= 70) return 'yellow';
@@ -81,25 +132,18 @@ function coverageColor(pct) {
   return 'red';
 }
 
-const bar = `![Overall ${totalPct.toFixed(2)}%](https://progress-bar.dev/${Math.round(totalPct)}?scale=100&width=500&suffix=%25)`;
-
+// ---------- build markdown ----------
 const lines = [];
-lines.push('# Code Coverage');
-lines.push('');
-lines.push(`_Last Updated: ${new Date().toISOString()}_`);
-lines.push('');
-lines.push('## Overall Coverage');
-lines.push('');
-lines.push(bar);
-lines.push('');
-lines.push(`**${totalPct.toFixed(2)}%**`);
-lines.push('');
-lines.push('## Coverage by Component');
-lines.push('');
+lines.push('# Code Coverage', '');
+lines.push(`_Last Updated: ${new Date().toISOString()}_`, '');
+lines.push('## Overall Coverage', '');
+lines.push('![Overall Coverage](./coverage-progress.svg)', '');
+lines.push(`**${overallPct.toFixed(2)}%**`, '');
+lines.push('## Coverage by Component', '');
 lines.push('| Component | Coverage |');
 lines.push('| --- | --- |');
 
-Object.entries(summary)
+Object.entries(jestSummary)
   .filter(([file]) => file !== 'total')
   .sort((a, b) => a[0].localeCompare(b[0]))
   .forEach(([file, stats]) => {
@@ -115,25 +159,23 @@ Object.entries(summary)
   });
 
 if (apexCoverages.length) {
-  lines.push('');
-  lines.push('## Coverage by Class');
-  lines.push('');
+  lines.push('', '## Coverage by Class', '');
   lines.push('| Class | Coverage |');
   lines.push('| --- | --- |');
   apexCoverages.forEach(({ name, pct }) => {
     const color = coverageColor(pct);
-    const label = pct.toFixed(2) + '%';
+    const label = (Number.isFinite(pct) ? pct : 0).toFixed(2) + '%';
     const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(
       label
     )}-${color}?label=)`;
-    lines.push(`| ${name}.cls | ${badge} |`);
+    // ensure .cls suffix once
+    const display = name.endsWith('.cls') ? name : `${name}.cls`;
+    lines.push(`| ${display} | ${badge} |`);
   });
 }
 
-lines.push('');
-lines.push('> Generated automatically. Run `npm run coverage:md` to refresh.');
-lines.push('');
-lines.push('[Detailed HTML coverage report](../coverage/lcov-report/index.html)');
-lines.push('');
+lines.push('', '> Generated automatically. Run `npm run coverage:md` to refresh.', '');
+lines.push('[Detailed HTML coverage report](../coverage/lcov-report/index.html)', '');
 
-fs.writeFileSync(outputPath, lines.join('\n') + '\n');
+fs.mkdirSync(path.dirname(mdOut), { recursive: true });
+fs.writeFileSync(mdOut, lines.join('\n') + '\n', 'utf8');

@@ -1,10 +1,10 @@
 # Code Coverage
 
-_Last Updated: 2025-08-12T09:30:10.980Z_
+_Last Updated: 2025-08-12T09:47:35.533Z_
 
 ## Overall Coverage
 
-![Overall 23.51%](https://progress-bar.dev/24?scale=100&width=500&suffix=%25)
+![Overall Coverage](./coverage-progress.svg)
 
 **23.51%**
 
@@ -17,13 +17,7 @@ _Last Updated: 2025-08-12T09:30:10.980Z_
 | labels.js | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
 | s3DocViewer.js | ![21.16%](https://img.shields.io/badge/-21.16%25-red?label=) |
 
-## Coverage by Class
-
-| Class | Coverage |
-| --- | --- |
-| AnotherClass.cls | ![60.00%](https://img.shields.io/badge/-60.00%25-orange?label=) |
-| SampleClass.cls | ![85.00%](https://img.shields.io/badge/-85.00%25-yellow?label=) |
-
 > Generated automatically. Run `npm run coverage:md` to refresh.
 
 [Detailed HTML coverage report](../coverage/lcov-report/index.html)
+

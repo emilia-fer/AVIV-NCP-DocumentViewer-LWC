@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="16" role="img" aria-label="Coverage 24%">
+  <defs>
+    <clipPath id="r">
+      <rect x="0" y="0" width="500" height="16" rx="8" ry="8"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect x="0" y="0" width="500" height="16" fill="#e6e6e6"/>
+    <rect x="0" y="0" width="120" height="16" fill="#3fb950"/>
+  </g>
+</svg>
