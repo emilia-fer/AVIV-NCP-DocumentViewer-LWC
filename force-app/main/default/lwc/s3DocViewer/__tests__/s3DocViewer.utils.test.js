@@ -65,6 +65,19 @@ describe('s3DocViewer utility functions', () => {
         expect(result.attachments[0].filename).toBe('inline.png');
         expect(result.attachments[0].contentId).toBe('img1');
     });
+
+        it('parseEml decodes base64 text bodies', () => {
+        const text = Buffer.from('Plain', 'utf-8').toString('base64');
+        const eml = [
+            'Content-Type: text/plain',
+            'Content-Transfer-Encoding: base64',
+            '',
+            text
+        ].join('\r\n');
+        const base64 = Buffer.from(eml, 'utf-8').toString('base64');
+        const result = parseEml(base64);
+        expect(result.html).toContain('Plain');
+    });
 });
 
 describe('s3DocViewer class helpers', () => {
