@@ -28,18 +28,28 @@ function findApexCoverage(dir) {
   return null;
 }
 
-const apexCoveragePath = findApexCoverage(coverageDir);
+function extractApexCoverages(obj) {
+  if (!obj || typeof obj !== 'object') return [];
+  if (Array.isArray(obj)) return obj.flatMap(extractApexCoverages);
 
+  const collections = [];
+  for (const key of ['codeCoverage', 'codecoverage', 'coverage']) {
+    const val = obj[key];
+    if (Array.isArray(val)) collections.push(val);
+    else if (val && Array.isArray(val.coverage)) collections.push(val.coverage);
+  }
+
+  return collections.flat().concat(
+    Object.values(obj).flatMap(extractApexCoverages)
+  );
+}
+
+const apexCoveragePath = findApexCoverage(coverageDir);
 let apexCoverages = [];
-if (fs.existsSync(apexCoveragePath)) {
+if (apexCoveragePath && fs.existsSync(apexCoveragePath)) {
   try {
     const apexRaw = JSON.parse(fs.readFileSync(apexCoveragePath, 'utf8'));
-    const entries =
-      apexRaw.result?.codeCoverage ||
-      apexRaw.result?.codecoverage ||
-      apexRaw.codeCoverage ||
-      apexRaw.codecoverage ||
-      [];
+    const entries = extractApexCoverages(apexRaw);
     apexCoverages = entries
       .map((c) => {
         const total =
@@ -71,11 +81,7 @@ function coverageColor(pct) {
   return 'red';
 }
 
-const bar = `
-<div style="position:relative;width:100%;height:20px;border-radius:4px;background:linear-gradient(to right,#dc2626,#f97316,#facc15,#16a34a);">
-  <div style="position:absolute;top:0;right:0;height:100%;width:${(100 - totalPct).toFixed(2)}%;background:#ddd;border-radius:0 4px 4px 0;"></div>
-</div>
-`;
+const bar = `![Overall ${totalPct.toFixed(2)}%](https://progress-bar.dev/${Math.round(totalPct)}?scale=100&width=500&suffix=%25)`;
 
 const lines = [];
 lines.push('# Code Coverage');
@@ -102,20 +108,24 @@ Object.entries(summary)
     const name = path.basename(file);
     const color = coverageColor(pct);
     const label = pct.toFixed(2) + '%';
-    const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(label)}-${color}?label=)`;
+    const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(
+      label
+    )}-${color}?label=)`;
     lines.push(`| ${name} | ${badge} |`);
   });
 
 if (apexCoverages.length) {
   lines.push('');
-  lines.push('## Coverage by Apex Class');
+  lines.push('## Coverage by Class');
   lines.push('');
   lines.push('| Class | Coverage |');
   lines.push('| --- | --- |');
   apexCoverages.forEach(({ name, pct }) => {
     const color = coverageColor(pct);
     const label = pct.toFixed(2) + '%';
-    const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(label)}-${color}?label=)`;
+    const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(
+      label
+    )}-${color}?label=)`;
     lines.push(`| ${name}.cls | ${badge} |`);
   });
 }
@@ -124,5 +134,6 @@ lines.push('');
 lines.push('> Generated automatically. Run `npm run coverage:md` to refresh.');
 lines.push('');
 lines.push('[Detailed HTML coverage report](../coverage/lcov-report/index.html)');
+lines.push('');
 
 fs.writeFileSync(outputPath, lines.join('\n') + '\n');
