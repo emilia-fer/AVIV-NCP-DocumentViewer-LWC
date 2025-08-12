@@ -12,6 +12,7 @@ describe('c-s3-doc-viewer', () => {
         const element = createElement('c-s3-doc-viewer', {
             is: S3DocViewer
         });
+        element.recordId = '001000000000000AAA';
         document.body.appendChild(element);
 
         const card = element.shadowRoot.querySelector('lightning-card');

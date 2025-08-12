@@ -138,7 +138,7 @@ lines.push('# Code Coverage', '');
 lines.push(`_Last Updated: ${new Date().toISOString()}_`, '');
 lines.push('## Overall Coverage', '');
 lines.push('![Overall Coverage](./coverage-progress.svg)', '');
-lines.push(`**${overallPct.toFixed(2)}%**`, '');
+//lines.push(`**${overallPct.toFixed(2)}%**`, '');
 lines.push('## Coverage by Component', '');
 lines.push('| Component | Coverage |');
 lines.push('| --- | --- |');

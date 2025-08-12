@@ -1267,3 +1267,6 @@ export default class S3DocViewer extends LightningElement {
         }
     }
 }
+
+// Export helper functions for unit testing
+export { mapMime, embedImages, parseEml, hostKey, resolveContext };
