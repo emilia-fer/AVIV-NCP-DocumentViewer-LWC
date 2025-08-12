@@ -5,7 +5,7 @@ private class S3DocServiceTest {
     private static S3_File__c makeFileForAccount(String name, Id accountId) {
         return new S3_File__c(
             Name               = name,
-            S3_Key__c          = 'folder 1/' + name, // include a space to test encoding later
+            S3_Key__c          = 'folder 1/' + name,
             Size__c            = 10,
             Type__c            = 'image/png',
             Creation_Year__c   = 2025,
@@ -28,8 +28,6 @@ private class S3DocServiceTest {
     }
 
     /* ---------- HTTP mocks ---------- */
-
-    // 200 OK with PNG body, and records the last endpoint we were called with
     private class RecordingOkMock implements HttpCalloutMock {
         public String lastEndpoint;
         public HTTPResponse respond(HTTPRequest req) {
@@ -44,20 +42,16 @@ private class S3DocServiceTest {
             return r;
         }
     }
-
-    // 200 OK with no Content-Type to exercise the default MIME branch
     private class NoMimeOkMock implements HttpCalloutMock {
         public String lastEndpoint;
         public HTTPResponse respond(HTTPRequest req) {
             lastEndpoint = req.getEndpoint();
             HttpResponse r = new HttpResponse();
             r.setStatusCode(200);
-            r.setBody('hello'); // text → bodyAsBlob still fine
+            r.setBody('hello');
             return r;
         }
     }
-
-    // Non-200
     private class FailMock implements HttpCalloutMock {
         public HTTPResponse respond(HTTPRequest req) {
             HttpResponse r = new HttpResponse();
@@ -86,9 +80,8 @@ private class S3DocServiceTest {
         List<Map<String,Object>> rows = S3DocService.getDocs(a.Id);
         Test.stopTest();
 
-        System.assertEquals(2, rows.size(), 'should return both rows tied to this Account (direct and via other parents)');
+        System.assertEquals(2, rows.size());
 
-        // Find the one with the Task and verify enrichment
         Boolean sawTask = false;
         for (Map<String,Object> r : rows) {
             if ((String)r.get('Name') == 'bundle.pdf') {
@@ -101,26 +94,21 @@ private class S3DocServiceTest {
     }
 
     /* ---------------- getFile ---------------- */
-
     @IsTest
     static void getFile_success_recordsEncodedEndpoint_andMimeFromHeader() {
         RecordingOkMock mock = new RecordingOkMock();
         Test.setMock(HttpCalloutMock.class, mock);
 
         Test.startTest();
-        // include spaces and slashes to verify segment encoding (spaces -> %20; slashes preserved)
         S3DocService.FilePayload fp = S3DocService.getFile('a folder/child file.png');
         Test.stopTest();
 
-        System.assertEquals('image/png', fp.contentType, 'should use header MIME when provided');
-        System.assert(fp.base64Data.startsWith('iVBOR'), 'PNG signature expected');
-
+        System.assertEquals('image/png', fp.contentType);
+        System.assert(fp.base64Data.startsWith('iVBOR'));
         System.assertNotEquals(null, mock.lastEndpoint);
-        // Must be callout:AWS_S3/<segments URL-encoded with spaces as %20, slashes intact>
         System.assert(mock.lastEndpoint.startsWith('callout:AWS_S3/'));
-        System.assert(mock.lastEndpoint.contains('a%20folder/child%20file.png'),
-            'Expected spaces encoded and slashes preserved, got: ' + mock.lastEndpoint);
-        System.assertEquals(-1, mock.lastEndpoint.indexOf('%2F'), 'No %2F allowed (slashes must be preserved)');
+        System.assert(mock.lastEndpoint.contains('a%20folder/child%20file.png'));
+        System.assertEquals(-1, mock.lastEndpoint.indexOf('%2F'));
     }
 
     @IsTest
@@ -132,7 +120,7 @@ private class S3DocServiceTest {
         S3DocService.FilePayload fp = S3DocService.getFile('no-mime/hello.bin');
         Test.stopTest();
 
-        System.assertEquals('application/octet-stream', fp.contentType, 'missing header should default MIME');
+        System.assertEquals('application/octet-stream', fp.contentType);
     }
 
     @IsTest
@@ -145,7 +133,7 @@ private class S3DocServiceTest {
         } catch (AuraHandledException e) {
             thrown = true;
         }
-        System.assert(thrown, 'blank key must throw AuraHandledException');
+        System.assert(thrown);
     }
 
     @IsTest
@@ -159,7 +147,7 @@ private class S3DocServiceTest {
         } catch (AuraHandledException e) {
             thrown = true;
         }
-        System.assert(thrown, 'non-200 must throw AuraHandledException');
+        System.assert(thrown);
     }
 
     /* ---------------- updateDescriptions ---------------- */
@@ -190,12 +178,11 @@ private class S3DocServiceTest {
 
         System.assertEquals('new-1', after.get(f1.Id).Description__c);
         System.assertEquals('new-2', after.get(f2.Id).Description__c);
-        // sanity: other fields unchanged
         System.assertEquals('doc1.txt', after.get(f1.Id).Name);
         System.assertEquals(1, after.get(f1.Id).Size__c);
     }
 
-    /* ---------------- related* helpers ---------------- */
+    /* ---------------- related* helpers (split to avoid double startTest) ---------------- */
 
     @IsTest
     static void relatedOpportunities_forAccount() {
@@ -208,7 +195,7 @@ private class S3DocServiceTest {
         List<Opportunity> got = S3DocService.relatedOpportunities(a.Id);
         Test.stopTest();
 
-        System.assertEquals(2, got.size(), 'Account → all opps');
+        System.assertEquals(2, got.size());
     }
 
     @IsTest
@@ -221,13 +208,13 @@ private class S3DocServiceTest {
         List<Opportunity> got = S3DocService.relatedOpportunities(c.Id);
         Test.stopTest();
 
-        System.assertEquals(1, got.size(), 'Case → opps of its account');
+        System.assertEquals(1, got.size());
         System.assertEquals(o.Id, got[0].Id);
     }
 
     @IsTest
     static void relatedOpportunities_otherPrefixes_empty() {
-        Contact ct = new Contact(LastName='C'); insert ct; // 003, but method returns empty for non-account/case
+        Contact ct = new Contact(LastName='C'); insert ct; // 003
         Test.startTest();
         List<Opportunity> got = S3DocService.relatedOpportunities(ct.Id);
         Test.stopTest();
@@ -235,26 +222,31 @@ private class S3DocServiceTest {
     }
 
     @IsTest
-    static void relatedCases_forAccount_and_forContact() {
+    static void relatedCases_forAccount_only() {
         Account a = new Account(Name='A'); insert a;
-        Contact ct = new Contact(LastName='C', AccountId=a.Id); insert ct;
-
         Case c1 = new Case(Status='New', Origin='Web', Subject='S1', AccountId=a.Id);
-        Case c2 = new Case(Status='New', Origin='Web', Subject='S2', ContactId=ct.Id);
+        Case c2 = new Case(Status='New', Origin='Web', Subject='S2', AccountId=a.Id);
         insert new List<Case>{ c1, c2 };
 
-        // Account branch
         Test.startTest();
         List<Case> acctCases = S3DocService.relatedCases(a.Id);
         Test.stopTest();
-        System.assert(acctCases.size() >= 1, 'Account → cases');
 
-        // Contact branch
+        System.assert(acctCases.size() >= 2);
+    }
+
+    @IsTest
+    static void relatedCases_forContact_only() {
+        Account a = new Account(Name='A'); insert a;
+        Contact ct = new Contact(LastName='C', AccountId=a.Id); insert ct;
+        Case c = new Case(Status='New', Origin='Web', Subject='S', ContactId=ct.Id); insert c;
+
         Test.startTest();
         List<Case> contactCases = S3DocService.relatedCases(ct.Id);
         Test.stopTest();
-        System.assertEquals(1, contactCases.size(), 'Contact → its cases');
-        System.assertEquals(c2.Id, contactCases[0].Id);
+
+        System.assertEquals(1, contactCases.size());
+        System.assertEquals(c.Id, contactCases[0].Id);
     }
 
     @IsTest
@@ -267,19 +259,21 @@ private class S3DocServiceTest {
     }
 
     @IsTest
-    static void relatedContacts_forAccount_andOthersEmpty() {
+    static void relatedContacts_forAccount_only() {
         Account a = new Account(Name='A'); insert a;
         Contact c1 = new Contact(LastName='C1', AccountId=a.Id);
         Contact c2 = new Contact(LastName='C2', AccountId=a.Id);
         insert new List<Contact>{ c1, c2 };
 
-        // Account branch
         Test.startTest();
         List<Contact> contacts = S3DocService.relatedContacts(a.Id);
         Test.stopTest();
-        System.assertEquals(2, contacts.size());
 
-        // Non-account branch → empty
+        System.assertEquals(2, contacts.size());
+    }
+
+    @IsTest
+    static void relatedContacts_otherPrefixes_empty() {
         Opportunity o = new Opportunity(Name='O', StageName='Prospecting', CloseDate=Date.today()); insert o;
         Test.startTest();
         List<Contact> empty = S3DocService.relatedContacts(o.Id);
