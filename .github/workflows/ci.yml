@@ -24,7 +24,7 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
-      - run: npm test
+      - run: npm test -- --coverage -- --coverageReporters=json-summary
 
       # ── light sanity check of the Lambda code ──────────────────────
       - name: Check Python syntax
@@ -43,10 +43,10 @@ jobs:
 
       # ── run Apex tests to capture code coverage ───────────────────
       - name: Run Apex tests with coverage
-        run: sf apex run test --target-org testOrg --code-coverage --result-format json --output-dir coverage --synchronous
+        run: sf apex run test --target-org testOrg --code-coverage --result-format json --output-dir coverage/apex --synchronous
 
-      # ── run LWC tests and build coverage markdown ─────────────────
-      - run: npm run coverage:md
+      # ── build coverage markdown ───────────────────────────────────
+      - run: node scripts/generateCoverageMd.js
 
       - name: Commit updated coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

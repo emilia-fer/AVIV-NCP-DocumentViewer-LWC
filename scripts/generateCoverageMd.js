@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const coveragePath = path.join(__dirname, '..', 'coverage', 'coverage-summary.json');
+const coverageDir = path.join(__dirname, '..', 'coverage');
+const coveragePath = path.join(coverageDir, 'coverage-summary.json');
 const outputPath = path.join(__dirname, '..', 'docs', 'code-coverage.md');
 
 if (!fs.existsSync(coveragePath)) {
@@ -10,21 +11,35 @@ if (!fs.existsSync(coveragePath)) {
 }
 
 const summary = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
-const totalPct = Number(summary.total?.statements?.pct || 0);
+const totalPct =
+  parseFloat(
+    summary.total?.statements?.pct ?? summary.total?.lines?.pct ?? 0
+  ) || 0;
 
-const apexCoveragePath = path.join(
-  __dirname,
-  '..',
-  'coverage',
-  'test-result-codecoverage.json'
-);
+function findApexCoverage(dir) {
+  const candidate = path.join(dir, 'test-result-codecoverage.json');
+  if (fs.existsSync(candidate)) return candidate;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const found = findApexCoverage(path.join(dir, entry.name));
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+const apexCoveragePath = findApexCoverage(coverageDir);
 
 let apexCoverages = [];
 if (fs.existsSync(apexCoveragePath)) {
   try {
     const apexRaw = JSON.parse(fs.readFileSync(apexCoveragePath, 'utf8'));
     const entries =
-      apexRaw.result?.codeCoverage || apexRaw.result?.codecoverage || [];
+      apexRaw.result?.codeCoverage ||
+      apexRaw.result?.codecoverage ||
+      apexRaw.codeCoverage ||
+      apexRaw.codecoverage ||
+      [];
     apexCoverages = entries
       .map((c) => {
         const total =
@@ -37,7 +52,7 @@ if (fs.existsSync(apexCoveragePath)) {
           (Array.isArray(c.coveredLines) ? c.coveredLines.length : undefined);
         const pct =
           c.percentage !== undefined
-            ? c.percentage
+            ? parseFloat(c.percentage)
             : total
             ? (covered / total) * 100
             : 0;
@@ -82,7 +97,8 @@ Object.entries(summary)
   .filter(([file]) => file !== 'total')
   .sort((a, b) => a[0].localeCompare(b[0]))
   .forEach(([file, stats]) => {
-    const pct = stats.statements.pct;
+    const pct =
+      parseFloat(stats.statements?.pct ?? stats.lines?.pct ?? 0) || 0;
     const name = path.basename(file);
     const color = coverageColor(pct);
     const label = pct.toFixed(2) + '%';
@@ -92,7 +108,7 @@ Object.entries(summary)
 
 if (apexCoverages.length) {
   lines.push('');
-  lines.push('### Apex Classes');
+  lines.push('## Coverage by Apex Class');
   lines.push('');
   lines.push('| Class | Coverage |');
   lines.push('| --- | --- |');
