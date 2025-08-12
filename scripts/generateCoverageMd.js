@@ -23,7 +23,8 @@ let apexCoverages = [];
 if (fs.existsSync(apexCoveragePath)) {
   try {
     const apexRaw = JSON.parse(fs.readFileSync(apexCoveragePath, 'utf8'));
-    const entries = apexRaw.result?.codecoverage || [];
+    const entries =
+      apexRaw.result?.codeCoverage || apexRaw.result?.codecoverage || [];
     apexCoverages = entries
       .map((c) => {
         const total =

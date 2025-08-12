@@ -44,3 +44,10 @@ jobs:
 
       # ── run LWC tests and build coverage markdown ─────────────────
       - run: npm run coverage:md
+
+      - name: Commit updated coverage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: docs/code-coverage.md
+          message: 'chore: update coverage [skip ci]'
