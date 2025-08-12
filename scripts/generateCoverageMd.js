@@ -12,6 +12,42 @@ if (!fs.existsSync(coveragePath)) {
 const summary = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
 const totalPct = summary.total.statements.pct;
 
+const apexCoveragePath = path.join(
+  __dirname,
+  '..',
+  'coverage',
+  'test-result-codecoverage.json'
+);
+
+let apexCoverages = [];
+if (fs.existsSync(apexCoveragePath)) {
+  try {
+    const apexRaw = JSON.parse(fs.readFileSync(apexCoveragePath, 'utf8'));
+    const entries = apexRaw.result?.codecoverage || [];
+    apexCoverages = entries
+      .map((c) => {
+        const total =
+          c.numLocations ??
+          (Array.isArray(c.coveredLines) && Array.isArray(c.uncoveredLines)
+            ? c.coveredLines.length + c.uncoveredLines.length
+            : undefined);
+        const covered =
+          c.numLocationsCovered ??
+          (Array.isArray(c.coveredLines) ? c.coveredLines.length : undefined);
+        const pct =
+          c.percentage !== undefined
+            ? c.percentage
+            : total
+            ? (covered / total) * 100
+            : 0;
+        return { name: c.name || c.apexClassOrTriggerName, pct };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e) {
+    console.warn('Failed to parse Apex coverage:', e.message);
+  }
+}
+
 function coverageColor(pct) {
   if (pct >= 90) return 'brightgreen';
   if (pct >= 70) return 'yellow';
@@ -19,7 +55,11 @@ function coverageColor(pct) {
   return 'red';
 }
 
-const bar = `\n<div style="position:relative;background:linear-gradient(to right,#dc2626,#f97316,#facc15,#16a34a);width:100%;height:20px;border-radius:4px;">\n  <div style="position:absolute;right:0;top:0;height:100%;width:${(100 - totalPct).toFixed(2)}%;background-color:#ddd;border-radius:0 4px 4px 0;"></div>\n</div>\n`;
+const bar = `
+<div style="position:relative;width:100%;height:20px;border-radius:4px;background:linear-gradient(to right,#dc2626,#f97316,#facc15,#16a34a);">
+  <div style="position:absolute;top:0;right:0;height:100%;width:${(100 - totalPct).toFixed(2)}%;background:#ddd;border-radius:0 4px 4px 0;"></div>
+</div>
+`;
 
 const lines = [];
 lines.push('# Code Coverage');
@@ -48,6 +88,20 @@ Object.entries(summary)
     const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(label)}-${color}?label=)`;
     lines.push(`| ${name} | ${badge} |`);
   });
+
+if (apexCoverages.length) {
+  lines.push('');
+  lines.push('### Apex Classes');
+  lines.push('');
+  lines.push('| Class | Coverage |');
+  lines.push('| --- | --- |');
+  apexCoverages.forEach(({ name, pct }) => {
+    const color = coverageColor(pct);
+    const label = pct.toFixed(2) + '%';
+    const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(label)}-${color}?label=)`;
+    lines.push(`| ${name}.cls | ${badge} |`);
+  });
+}
 
 lines.push('');
 lines.push('> Generated automatically. Run `npm run coverage:md` to refresh.');

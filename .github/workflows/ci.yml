@@ -38,11 +38,9 @@ jobs:
           echo "$SFDX_AUTH_URL" > auth-url.txt
           sf org login sfdx-url --sfdx-url-file auth-url.txt --alias testOrg --json
 
-      # ── validate metadata & run all Apex tests (no changes pushed) ─
-      - name: Validate deploy & run tests
-        run: |
-          sf project deploy start \
-            -d force-app \
-            -o testOrg \
-            --dry-run \
-            --test-level RunLocalTests
+      # ── run Apex tests to capture code coverage ───────────────────
+      - name: Run Apex tests with coverage
+        run: sf apex run test --target-org testOrg --code-coverage --result-format json --output-dir coverage
+
+      # ── run LWC tests and build coverage markdown ─────────────────
+      - run: npm run coverage:md

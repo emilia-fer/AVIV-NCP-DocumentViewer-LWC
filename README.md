@@ -169,17 +169,14 @@ npm install
 npm test
 ```
 
-Generate a coverage report and refresh the markdown summary:
+Generate LWC and Apex coverage and refresh the markdown summary:
 
 ```bash
+sf apex run test --target-org <org> --code-coverage --result-format json --output-dir coverage
 npm run coverage:md
 ```
 
-Execute Apex tests through the Salesforce CLI:
-
-```bash
-sfdx force:apex:test:run --resultformat human --codecoverage
-```
+The CI workflow runs these commands on every push to keep `docs/code-coverage.md` up to date.
 
 ---
 
