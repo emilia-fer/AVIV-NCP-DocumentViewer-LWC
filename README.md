@@ -169,6 +169,12 @@ npm install
 npm test
 ```
 
+Generate a coverage report and refresh the markdown summary:
+
+```bash
+npm run coverage:md
+```
+
 Execute Apex tests through the Salesforce CLI:
 
 ```bash
