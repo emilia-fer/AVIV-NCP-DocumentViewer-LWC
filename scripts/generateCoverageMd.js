@@ -7,7 +7,6 @@ const coverageDir = path.join(root, 'coverage');
 const jestSummaryPath = path.join(coverageDir, 'coverage-summary.json');
 const apexDir = path.join(coverageDir, 'apex');
 const mdOut = path.join(root, 'docs', 'code-coverage.md');
-const svgOut = path.join(root, 'docs', 'coverage-progress.svg');
 
 function fail(msg) {
   console.error(msg);
@@ -24,29 +23,7 @@ const overallPct =
     jestSummary.total?.statements?.pct ?? jestSummary.total?.lines?.pct ?? 0
   ) || 0;
 
-// ---------- make a local SVG progress bar ----------
-function makeProgressSvg(pct) {
-  const width = 500, height = 16, radius = 8;
-  const pctRounded = Math.max(0, Math.min(100, Math.round(pct)));
-  const fillWidth = Math.round((pctRounded / 100) * width);
-
-  return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" role="img" aria-label="Coverage ${pctRounded}%">
-  <defs>
-    <clipPath id="r">
-      <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}"/>
-    </clipPath>
-  </defs>
-  <g clip-path="url(#r)">
-    <rect x="0" y="0" width="${width}" height="${height}" fill="#e6e6e6"/>
-    <rect x="0" y="0" width="${fillWidth}" height="${height}" fill="#3fb950"/>
-  </g>
-</svg>`.trim();
-}
-
-fs.writeFileSync(svgOut, makeProgressSvg(overallPct), 'utf8');
-
-// ---------- find Apex coverage ----------
+/* ---------- find Apex coverage ---------- */
 function findFiles(dir, names) {
   const out = [];
   if (!fs.existsSync(dir)) return out;
@@ -62,9 +39,6 @@ function extractApexCoverages(obj) {
   if (!obj || typeof obj !== 'object') return [];
   const results = [];
 
-  // Common shapes:
-  // 1) test-result-codecoverage.json -> array of { name, percentage | coveredPercent | numLocationsCovered/numLocations }
-  // 2) test-result.json -> { codecoverage: [ { apexClassOrTriggerName, coveredPercent } ] }
   const arrays = [];
   if (Array.isArray(obj)) arrays.push(obj);
   if (Array.isArray(obj.codecoverage)) arrays.push(obj.codecoverage);
@@ -94,12 +68,10 @@ function extractApexCoverages(obj) {
     }
   }
 
-  // Recurse other properties for nested objects
   for (const v of Object.values(obj)) {
     if (v && typeof v === 'object') results.push(...extractApexCoverages(v));
   }
 
-  // De-dup by name (keep max pct)
   const byName = new Map();
   for (const r of results) {
     const current = byName.get(r.name);
@@ -119,12 +91,12 @@ for (const f of apexFiles) {
     const obj = JSON.parse(fs.readFileSync(f, 'utf8'));
     apexCoverages = extractApexCoverages(obj);
     if (apexCoverages.length) break;
-  } catch (e) {
+  } catch (_) {
     // ignore and try next
   }
 }
 
-// ---------- utility ----------
+/* ---------- utility ---------- */
 function coverageColor(pct) {
   if (pct >= 90) return 'brightgreen';
   if (pct >= 70) return 'yellow';
@@ -132,13 +104,18 @@ function coverageColor(pct) {
   return 'red';
 }
 
-// ---------- build markdown ----------
+/* ---------- build markdown ---------- */
+const overallColor = coverageColor(overallPct);
+const overallLabel = `${overallPct.toFixed(2)}%`;
+const overallBadge = `![Overall ${overallLabel}](https://img.shields.io/badge/-${encodeURIComponent(
+  overallLabel
+)}-${overallColor}?label=Overall%20Coverage)`;
+
 const lines = [];
 lines.push('# Code Coverage', '');
 lines.push(`_Last Updated: ${new Date().toISOString()}_`, '');
 lines.push('## Overall Coverage', '');
-lines.push('![Overall Coverage](./coverage-progress.svg)', '');
-//lines.push(`**${overallPct.toFixed(2)}%**`, '');
+lines.push(overallBadge, '');
 lines.push('## Coverage by Component', '');
 lines.push('| Component | Coverage |');
 lines.push('| --- | --- |');
@@ -168,7 +145,6 @@ if (apexCoverages.length) {
     const badge = `![${label}](https://img.shields.io/badge/-${encodeURIComponent(
       label
     )}-${color}?label=)`;
-    // ensure .cls suffix once
     const display = name.endsWith('.cls') ? name : `${name}.cls`;
     lines.push(`| ${display} | ${badge} |`);
   });

@@ -14,6 +14,7 @@ if (typeof atob === 'undefined') {
 
 describe('s3DocViewer utility functions', () => {
     it('mapMime returns expected categories', () => {
+        expect(mapMime()).toBe('');
         expect(mapMime('image/png')).toBe('image');
         expect(mapMime('jpg')).toBe('image');
         expect(mapMime('application/pdf')).toBe('pdf');
@@ -39,26 +40,30 @@ describe('s3DocViewer utility functions', () => {
         expect(embedImages(html, attachments)).toBe('<img src="data:image/png;base64,ZmFrZQ==">');
     });
 
-    it('parseEml parses text and attachments', () => {
+    it('parseEml handles html, inline and regular attachments', () => {
         const eml = [
-            'Content-Type: multipart/mixed; boundary="X"',
+            'Content-Type: multipart/related; boundary="M"',
             '',
-            '--X',
-            'Content-Type: text/plain',
+            '--M',
+            'Content-Type: text/html',
+            'Content-Transfer-Encoding: quoted-printable',
             '',
-            'Hello World',
-            '--X',
-            'Content-Type: text/plain',
-            'Content-Disposition: attachment; filename="file.txt"',
+            '<html><head><style>.x{}</style></head><body>Hello</body></html>',
+            '--M',
+            'Content-Type: image/png',
+            'Content-ID: <img1>',
+            'Content-Disposition: inline; filename*=utf-8\'\'inline.png',
             'Content-Transfer-Encoding: base64',
             '',
-            'SGVsbG8=',
-            '--X--'
+            'ZmFrZQ==',
+            '--M--'
         ].join('\r\n');
         const base64 = Buffer.from(eml, 'utf-8').toString('base64');
         const result = parseEml(base64);
-        expect(result.html).toContain('Hello');
-        expect(Array.isArray(result.attachments)).toBe(true);
+        expect(result.html).toContain('<body>Hello</body>');
+        expect(result.attachments.length).toBe(1);
+        expect(result.attachments[0].filename).toBe('inline.png');
+        expect(result.attachments[0].contentId).toBe('img1');
     });
 });
 
@@ -73,7 +78,8 @@ describe('s3DocViewer class helpers', () => {
         const mockThis = {
             recordId: '001XYZ',
             labels: mockLabels,
-            optionalCols: []
+            optionalCols: [],
+            taskCol: { fieldName: 'TaskUrl', label: 'Task' }
         };
         const rows = [{
             Name: 'Test',
@@ -87,12 +93,33 @@ describe('s3DocViewer class helpers', () => {
             ContactName: 'Con',
             ContactUrl: '/003',
             CaseNumber: 'C-0001',
-            CaseUrl: '/500'
+            CaseUrl: '/500',
+            TaskId: '00T1',
+            TaskUrl: '/00T1',
+            TaskName: 'Task'
         }];
         const cols = S3DocViewer.prototype.buildColumns.call(mockThis, rows);
         const fieldNames = cols.map(c => c.fieldName);
         expect(fieldNames).toEqual(expect.arrayContaining(['OpportunityUrl','ContactUrl','CaseUrl']));
         expect(mockThis.optionalCols.length).toBe(cols.length - 5);
+    });
+
+    it('connectedCallback assigns optional columns per context', () => {
+        const labels = {
+            accountCol: 'Account',
+            opportunityCol: 'Opportunity',
+            contactCol: 'Contact',
+            caseCol: 'Case'
+        };
+        const call = (id) => {
+            const ctx = { recordId: id, labels };
+            S3DocViewer.prototype.connectedCallback.call(ctx);
+            return ctx.optionalCols.length;
+        };
+        expect(call('001AAA')).toBe(4); // Account
+        expect(call('006AAA')).toBe(1); // Opportunity
+        expect(call('500AAA')).toBe(1); // Case
+        expect(call('999AAA')).toBe(0); // Default
     });
 
     it('columns getter respects showExtended toggle', () => {
@@ -109,6 +136,101 @@ describe('s3DocViewer class helpers', () => {
         expect(hasOptionalsGetter.call(mockThis)).toBe(true);
         mockThis.showExtended = false;
         expect(columnsGetter.call(mockThis).length).toBe(5);
+    });
+
+    it('hasVisibleOptionals and button related getters work', () => {
+        const ctx = {
+            optionalCols: [{ fieldName: 'AccountUrl' }],
+            pageNumber: 1,
+            pageSize: 20,
+            filteredRows: [{ AccountName: 'Acme' }],
+            showExtended: false,
+            labels: { moreColumns: 'More', lessColumns: 'Less' }
+        };
+        const hasVis = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'hasVisibleOptionals').get;
+        const btn = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'buttonLabel').get;
+        const descWidth = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'descWidth').get;
+        expect(hasVis.call(ctx)).toBe(true);
+        expect(btn.call(ctx)).toBe('More');
+        ctx.showExtended = true;
+        expect(btn.call(ctx)).toBe('Less');
+        expect(descWidth.call({ hasVisibleOptionals: true })).toBe(260);
+        expect(descWidth.call({ hasVisibleOptionals: false })).toBe(530);
+    });
+
+    it('sorting and paging helpers', () => {
+        const sortedGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'sortedDocs').get;
+        const hasDraftGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'hasDraftValues').get;
+        const pageCountGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'pageCount').get;
+        const disablePrevGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'disablePrev').get;
+        const disableNextGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'disableNext').get;
+        const placeBtnGetter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'placeButtonBesideFilters').get;
+        const ctx = {
+            docs: [{ Name: 'b' }, { Name: 'a' }],
+            sortBy: 'Name',
+            sortDirection: 'asc',
+            sortFunc: S3DocViewer.prototype.sortFunc,
+            draftValues: [{ Id: 1 }],
+            filteredRows: [1, 2, 3, 4],
+            pageSize: 2,
+            pageNumber: 1,
+            showFilters: true
+        };
+        Object.defineProperty(ctx, 'pageCount', {
+            get: () => pageCountGetter.call(ctx)
+        });
+        expect(sortedGetter.call(ctx)[0].Name).toBe('a');
+        expect(hasDraftGetter.call(ctx)).toBe(true);
+        expect(pageCountGetter.call(ctx)).toBe(2);
+        expect(disablePrevGetter.call(ctx)).toBe(true);
+        ctx.pageNumber = 2;
+        expect(disableNextGetter.call(ctx)).toBe(true);
+        expect(placeBtnGetter.call(ctx)).toBe(true);
+    });
+
+    it('filteredAndSortedDocs sorts and updates columns', () => {
+        const ctx = {
+            filteredRows: [{ Name: 'b' }, { Name: 'a' }],
+            sortBy: 'Name',
+            sortDirection: 'asc',
+            sortFunc: S3DocViewer.prototype.sortFunc,
+            pageNumber: 1,
+            pageSize: 20,
+            buildColumns: jest.fn().mockReturnValue(['col'])
+        };
+        const getter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'filteredAndSortedDocs').get;
+        const result = getter.call(ctx);
+        expect(result[0].Name).toBe('a');
+        expect(ctx.dynamicColumns).toEqual(['col']);
+    });
+
+    it('preview and lookup getters evaluate correctly', () => {
+        const ctx = {
+            previewName: 'file',
+            previewMime: 'image/png',
+            isLoading: false,
+            error: null,
+            contextObject: 'Account',
+            isImageSelected: true,
+            upMime: 'application/pdf'
+        };
+        const get = (prop) => Object.getOwnPropertyDescriptor(S3DocViewer.prototype, prop).get;
+        expect(get('showList').call({ previewName: null, error: null })).toBe(true);
+        expect(get('showPreview').call(ctx)).toBe(true);
+        expect(get('isImage').call(ctx)).toBe(true);
+        expect(get('isText').call(ctx)).toBe(false);
+        expect(get('isPdf').call({ previewMime: 'application/pdf' })).toBe(true);
+        expect(get('isDocx').call({ previewMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toBe(true);
+        expect(get('isMsg').call({ previewMime: 'application/vnd.ms-outlook' })).toBe(true);
+        expect(get('isEml').call({ previewMime: 'message/rfc822' })).toBe(true);
+        expect(get('isOther').call({ showPreview: true, previewError: null, isImage: false, isText: false, isPdf: false, isDocx: false, isMsg: false, isEml: false })).toBe(true);
+        expect(get('showOppLookup').call({ contextObject: 'Account' })).toBe(true);
+        expect(get('showCaseLookup').call({ contextObject: 'Opportunity' })).toBe(true);
+        expect(get('showContactLookup').call({ contextObject: 'Account' })).toBe(true);
+        expect(get('isImageUpload').call({ isImageSelected: true })).toBe(true);
+        expect(get('upIsImage').call({ upMime: 'image/png' })).toBe(true);
+        expect(get('upIsPdf').call(ctx)).toBe(true);
+        expect(get('upIsDocx').call({ upMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toBe(true);
     });
 
     it('safeMessage handles various error shapes', () => {
@@ -166,24 +288,24 @@ describe('s3DocViewer class helpers', () => {
         expect(docxGetter.call(docxCtx)).toBe(true);
     });
 
-    it('filteredRows applies name and description filters', () => {
+    it('filteredRows applies all filters', () => {
         const ctx = {
             docs: [
-                { Name: 'Alpha', Description__c: 'First' },
-                { Name: 'Beta', Description__c: 'Second' }
+                { Name: 'Alpha', Description__c: 'First', DisplayType: 'img', Creation_Year__c: 2023, Size__c: 50 },
+                { Name: 'Beta', Description__c: 'Second', DisplayType: 'pdf', Creation_Year__c: 2024, Size__c: 200 }
             ],
             nameKey: 'a',
             nameMode: 'starts',
             descKey: 'first',
             descMode: 'contains',
-            typeFilter: 'all',
+            typeFilter: 'img',
             searchKey: '',
-            yearFrom: undefined,
-            yearTo: undefined,
+            yearFrom: 2023,
+            yearTo: 2023,
             dateFrom: undefined,
             dateTo: undefined,
-            sizeMin: undefined,
-            sizeMax: undefined
+            sizeMin: 40,
+            sizeMax: 60
         };
         const getter = Object.getOwnPropertyDescriptor(S3DocViewer.prototype, 'filteredRows').get;
         const result = getter.call(ctx);
