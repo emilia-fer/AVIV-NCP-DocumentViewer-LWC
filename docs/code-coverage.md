@@ -1,6 +1,6 @@
 # Code Coverage
 
-_Last Updated: 2025-08-12T10:11:52.193Z_
+_Last Updated: 2025-08-12T14:54:41.311Z_
 
 ## Overall Coverage
 
@@ -11,31 +11,19 @@ _Last Updated: 2025-08-12T10:11:52.193Z_
 | Component | Coverage |
 | --- | --- |
 | docxViewer.js | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
-| pdfViewer.js | ![75.00%](https://img.shields.io/badge/-75.00%25-yellow?label=) |
+| pdfViewer.js | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
 | labels.js | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
-| s3DocViewer.js | ![33.28%](https://img.shields.io/badge/-33.28%25-red?label=) |
+| s3DocViewer.js | ![41.48%](https://img.shields.io/badge/-41.48%25-red?label=) |
 
 ## Coverage by Class
 
 | Class | Coverage |
 | --- | --- |
-| FileSyncBatch.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| FileSyncBatchTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| FileSyncSmokeTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| FileSyncWorker.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| FileUploadJob.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| FileUploadJobTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| MsgPreviewService.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| MsgPreviewServiceTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| ObjectAdd.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| ObjectAddTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| ObjectList.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| S3DocService.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| S3FileCreator.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| S3FileCreatorTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| S3PresignService.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| S3PresignServiceTest.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
-| Sched_FileSync_Nightly.cls | ![0.00%](https://img.shields.io/badge/-0.00%25-red?label=) |
+| FileSyncBatch.cls | ![93.00%](https://img.shields.io/badge/-93.00%25-brightgreen?label=) |
+| FileSyncWorker.cls | ![61.00%](https://img.shields.io/badge/-61.00%25-orange?label=) |
+| ObjectAdd.cls | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
+| S3DocService.cls | ![60.00%](https://img.shields.io/badge/-60.00%25-orange?label=) |
+| Sched_FileSync_Nightly.cls | ![100.00%](https://img.shields.io/badge/-100.00%25-brightgreen?label=) |
 
 > Generated automatically. Run `npm run coverage:md` to refresh.
 
