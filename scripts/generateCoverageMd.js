@@ -10,7 +10,7 @@ if (!fs.existsSync(coveragePath)) {
 }
 
 const summary = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
-const totalPct = summary.total.statements.pct;
+const totalPct = Number(summary.total?.statements?.pct || 0);
 
 const apexCoveragePath = path.join(
   __dirname,
