@@ -113,15 +113,17 @@ describe('s3DocViewer handlers and wires', () => {
 
     it('clearSelectedFile revokes URLs and resets state', () => {
         global.URL.revokeObjectURL = jest.fn();
+        const inputEl = { value: 'x' };
         const ctx = {
             previewImageUrl:'img',
             previewFileUrl:'file',
-            template:{ querySelector: jest.fn() },
+            template:{ querySelector: jest.fn().mockReturnValue(inputEl) },
             selectedFile:'x', editFileName:'n', newDescription:'d', iconTone:'tone'
         };
         S3DocViewer.prototype.clearSelectedFile.call(ctx);
         expect(global.URL.revokeObjectURL).toHaveBeenCalledTimes(2);
         expect(ctx.selectedFile).toBeNull();
+        expect(inputEl.value).toBeNull();
     });
 
     it('handleRowAction loads text files', async () => {
@@ -195,5 +197,117 @@ describe('s3DocViewer handlers and wires', () => {
         expect(getPresignedUrl).toHaveBeenCalled();
         expect(createS3File).toHaveBeenCalled();
         expect(ctx.isUploading).toBe(false);
+    });
+
+    it('misc handlers update state and modal', () => {
+        const ctx = { showModal:false };
+        S3DocViewer.prototype.handleDraft.call(ctx,{detail:{draftValues:[{Id:1}]}});
+        S3DocViewer.prototype.handleNewDescriptionChange.call(ctx,{target:{value:'d'}});
+        S3DocViewer.prototype.handleNewDate.call(ctx,{target:{value:'2024-01-01'}});
+        S3DocViewer.prototype.handleNewYearChange.call(ctx,{detail:{value:2024}});
+        S3DocViewer.prototype.handleOpportunityChange.call(ctx,{detail:{value:'006'}});
+        S3DocViewer.prototype.handleCaseChange.call(ctx,{detail:{value:'500'}});
+        S3DocViewer.prototype.handleContactChange.call(ctx,{detail:{value:'003'}});
+        S3DocViewer.prototype.handleTaskChange.call(ctx,{detail:{value:'00T'}});
+        S3DocViewer.prototype.openModal.call(ctx);
+        ctx.selectedFile = 'file';
+        ctx.uploadMessage = 'msg';
+        S3DocViewer.prototype.closeModal.call(ctx);
+        expect(ctx.draftValues.length).toBe(1);
+        expect(ctx.newCreationYear).toBe(2024);
+        expect(ctx.newCaseId).toBe('500');
+        expect(ctx.showModal).toBe(false);
+        expect(ctx.selectedFile).toBeNull();
+        expect(ctx.uploadMessage).toBe('');
+    });
+
+    it('handleFileChange with no file clears previews', () => {
+        const ctx = { previewImageUrl:'a', previewFileUrl:'b', isImageSelected:true };
+        S3DocViewer.prototype.handleFileChange.call(ctx,{target:{files:[]}});
+        expect(ctx.previewImageUrl).toBeNull();
+        expect(ctx.previewFileUrl).toBeNull();
+        expect(ctx.isImageSelected).toBe(false);
+    });
+
+    it('handleSave surfaces errors', async () => {
+        updateDescriptions.mockRejectedValue(new Error('bad'));
+        const ctx = {
+            labels:{ saved:'', saveFailed:'fail' },
+            docs:[{Id:'1', Description__c:'old'}],
+            template:{ querySelector: jest.fn().mockReturnValue({ draftValues: [] }) },
+            dispatchEvent: jest.fn(),
+            isLoading:false,
+            safeMessage:e=>e.message
+        };
+        await S3DocViewer.prototype.handleSave.call(ctx,{detail:{draftValues:[{Id:'1', Description__c:'new'}]}});
+        expect(ctx.dispatchEvent).toHaveBeenCalled();
+        expect(ctx.isLoading).toBe(false);
+    });
+
+    it('closeUploadPreview resets state', () => {
+        global.URL.revokeObjectURL = jest.fn();
+        const ctx = {
+            uploadPreviewSrc:'url', uploadPreviewHtml:'h', uploadPreviewText:'t', uploadPreviewError:'e', showUploadPreview:true
+        };
+        S3DocViewer.prototype.closeUploadPreview.call(ctx);
+        expect(global.URL.revokeObjectURL).toHaveBeenCalled();
+        expect(ctx.uploadPreviewSrc).toBeNull();
+        expect(ctx.uploadPreviewHtml).toBeNull();
+        expect(ctx.uploadPreviewText).toBeNull();
+        expect(ctx.uploadPreviewError).toBeNull();
+    });
+
+    it('openAttachment opens new tab', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue();
+        S3DocViewer.prototype.openAttachment.call({}, { currentTarget:{ dataset:{ url:'http://x' } } });
+        expect(open).toHaveBeenCalledWith('http://x', '_blank');
+        open.mockRestore();
+    });
+
+    it('closePreview revokes attachment URLs', () => {
+        global.URL.revokeObjectURL = jest.fn();
+        const ctx = {
+            previewAttachments:[{url:'u1'},{url:'u2'}],
+            _blobUrl:'blob',
+            previewName:'n', previewText:'t', previewSrc:'s', previewMime:'m', error:'e', previewError:'err'
+        };
+        S3DocViewer.prototype.closePreview.call(ctx);
+        expect(global.URL.revokeObjectURL).toHaveBeenCalledTimes(3);
+        expect(ctx.previewAttachments).toEqual([]);
+        expect(ctx.previewName).toBeUndefined();
+        expect(ctx.previewError).toBeUndefined();
+    });
+
+    it('downloadFile handles errors', async () => {
+        getPresignedGetUrl.mockRejectedValue(new Error('bad'));
+        const ctx = { previewSrc:null, previewS3Key:'k', previewName:'n', dispatchEvent: jest.fn(), safeMessage:e=>e.message };
+        await S3DocViewer.prototype.downloadFile.call(ctx);
+        expect(ctx.dispatchEvent).toHaveBeenCalled();
+    });
+
+    it('uploadFile exits when no file selected', async () => {
+        const ctx = { labels:{ noFileSelected:'no' }, selectedFile:null, uploadMessage:'' };
+        await S3DocViewer.prototype.uploadFile.call(ctx);
+        expect(ctx.uploadMessage).toBe('no');
+    });
+
+    it('uploadFile infers mime and handles presign errors', async () => {
+        getPresignedUrl.mockResolvedValue({});
+        const ctx = {
+            labels:{ uploadedTitle:'up', uploadFailed:'fail', noFileSelected:'no' },
+            selectedFile:{ name:'file.pdf', type:'', size:1 },
+            editFileName:'file',
+            newDescription:'',
+            newCreationYear:2024,
+            newCreationDate:'2024-01-01',
+            contextObject:'Account',
+            recordId:'001',
+            dispatchEvent: jest.fn(),
+            closeModal: jest.fn()
+        };
+        await S3DocViewer.prototype.uploadFile.call(ctx);
+        expect(getPresignedUrl).toHaveBeenCalled();
+        expect(ctx.isUploading).toBe(false);
+        expect(ctx.dispatchEvent).toHaveBeenCalled();
     });
 });
