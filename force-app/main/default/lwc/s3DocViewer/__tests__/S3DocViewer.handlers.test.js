@@ -11,6 +11,7 @@ import getFile from '@salesforce/apex/S3DocService.getFile';
 import getPresignedUrl from '@salesforce/apex/S3PresignService.getPresignedUrl';
 import createS3File from '@salesforce/apex/S3FileCreator.create';
 import getPresignedGetUrl from '@salesforce/apex/S3PresignService.getPresignedGetUrl';
+import fetchMsg from '@salesforce/apex/MsgPreviewService.fetch';
 import { Buffer } from 'buffer';
 
 if (typeof global.atob === 'undefined') {
@@ -309,5 +310,91 @@ describe('s3DocViewer handlers and wires', () => {
         expect(getPresignedUrl).toHaveBeenCalled();
         expect(ctx.isUploading).toBe(false);
         expect(ctx.dispatchEvent).toHaveBeenCalled();
+    });
+
+    it('measureBrightness computes preview tone', () => {
+        const data = new Uint8ClampedArray(64 * 4).fill(255);
+        const ctxObj = {
+            getImageData: jest.fn().mockReturnValue({ data }),
+            drawImage: jest.fn()
+        };
+        const canvas = { getContext: () => ctxObj, width:0, height:0 };
+        const create = jest.spyOn(document, 'createElement').mockReturnValue(canvas);
+        const ctx = {};
+        S3DocViewer.prototype.measureBrightness.call(ctx, { target:{} });
+        expect(ctx.isDarkPreview).toBe(false);
+        create.mockRestore();
+    });
+
+    it('openLocalPreview handles images', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue();
+        const file = { name:'img.png', type:'image/png' };
+        class FR { readAsDataURL(){ this.result='data:image/png;base64,AAA'; this.onload(); } }
+        global.FileReader = FR;
+        S3DocViewer.prototype.openLocalPreview.call({ selectedFile:file });
+        expect(open).toHaveBeenCalledWith('data:image/png;base64,AAA', '_blank');
+        open.mockRestore();
+    });
+
+    it('openLocalPreview renders text files', () => {
+        const win = { document:{ write: jest.fn(), title:'' } };
+        const open = jest.spyOn(window, 'open').mockReturnValue(win);
+        const file = { name:'note.txt', type:'text/plain' };
+        class FR { readAsText(){ this.result='hi'; this.onload(); } }
+        global.FileReader = FR;
+        S3DocViewer.prototype.openLocalPreview.call({ selectedFile:file });
+        expect(open).toHaveBeenCalledWith('', '_blank');
+        expect(win.document.write).toHaveBeenCalled();
+        open.mockRestore();
+    });
+
+    it('openLocalPreview creates blob for pdf', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue();
+        const create = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:1');
+        const revoke = jest.spyOn(URL, 'revokeObjectURL').mockImplementation(()=>{});
+        jest.useFakeTimers();
+        const file = { name:'doc.pdf', type:'application/pdf' };
+        class FR { readAsArrayBuffer(){ this.result=new ArrayBuffer(1); this.onload(); } }
+        global.FileReader = FR;
+        S3DocViewer.prototype.openLocalPreview.call({ selectedFile:file });
+        expect(open).toHaveBeenCalledWith('blob:1', '_blank');
+        jest.runAllTimers();
+        expect(revoke).toHaveBeenCalled();
+        open.mockRestore(); create.mockRestore(); revoke.mockRestore(); jest.useRealTimers();
+    });
+
+    it('openLocalPreview falls back for unknown types', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue();
+        const create = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:2');
+        const revoke = jest.spyOn(URL, 'revokeObjectURL').mockImplementation(()=>{});
+        jest.useFakeTimers();
+        const file = { name:'file.bin', type:'' };
+        class FR { readAsArrayBuffer(){ this.result=new ArrayBuffer(1); this.onload(); } }
+        global.FileReader = FR;
+        S3DocViewer.prototype.openLocalPreview.call({ selectedFile:file });
+        expect(open).toHaveBeenCalledWith('blob:2', '_blank');
+        jest.runAllTimers();
+        expect(revoke).toHaveBeenCalled();
+        open.mockRestore(); create.mockRestore(); revoke.mockRestore(); jest.useRealTimers();
+    });
+
+    it('handleRowAction guesses gif mime from extension', async () => {
+        const b64 = Buffer.from('gif').toString('base64');
+        getFile.mockResolvedValue({ base64Data:b64, contentType:'application/octet-stream' });
+        const ctx = { labels:{} };
+        await S3DocViewer.prototype.handleRowAction.call(ctx,{ detail:{ row:{ Name:'pic.gif', s3Key:'k' } } });
+        expect(ctx.previewMime).toBe('image/gif');
+        expect(ctx.previewSrc).toContain('data:image/gif;base64');
+    });
+
+    it('handleRowAction processes msg attachments', async () => {
+        const b64 = Buffer.from('msg').toString('base64');
+        getFile.mockResolvedValue({ base64Data:b64, contentType:'application/octet-stream' });
+        fetchMsg.mockResolvedValue(JSON.stringify({ html:'<p>Hi</p>', attachments:[{ filename:'a.txt', contentType:'text/plain', data:Buffer.from('hi').toString('base64') }] }));
+        const ctx = { labels:{}, dispatchEvent: jest.fn(), isImage:false, isText:false, isPdf:false, isDocx:false, isMsg:true, isEml:false };
+        global.URL.createObjectURL = jest.fn().mockReturnValue('blob:u');
+        await S3DocViewer.prototype.handleRowAction.call(ctx,{ detail:{ row:{ Name:'mail.msg', s3Key:'k' } } });
+        expect(ctx.previewHtml).toContain('<p>Hi</p>');
+        expect(ctx.previewAttachments.length).toBe(1);
     });
 });

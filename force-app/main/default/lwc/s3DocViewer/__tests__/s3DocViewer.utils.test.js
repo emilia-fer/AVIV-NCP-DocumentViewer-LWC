@@ -78,7 +78,38 @@ describe('s3DocViewer utility functions', () => {
         const result = parseEml(base64);
         expect(result.html).toContain('Plain');
     });
-});
+
+      it('parseEml handles quoted-printable and raw text', () => {
+          const qpEml = [
+              'Content-Type: text/plain',
+              'Content-Transfer-Encoding: quoted-printable',
+              '',
+              'Hi=3F'
+        ].join('\r\n');
+        const rawEml = [
+            'Content-Type: text/plain',
+            '',
+            '<raw&>'
+        ].join('\r\n');
+        const qpB64 = Buffer.from(qpEml, 'utf-8').toString('base64');
+        const rawB64 = Buffer.from(rawEml, 'utf-8').toString('base64');
+        const qpResult = parseEml(qpB64);
+          const rawResult = parseEml(rawB64);
+          expect(qpResult.html).toContain('Hi?');
+          expect(rawResult.html).toContain('&lt;raw&amp;&gt;');
+      });
+
+      it('parseEml returns fallback for unknown content', () => {
+          const eml = [
+              'Content-Type: application/x-custom',
+              '',
+              'data'
+          ].join('\r\n');
+          const base64 = Buffer.from(eml, 'utf-8').toString('base64');
+          const result = parseEml(base64);
+          expect(result.attachments.length).toBe(0);
+      });
+  });
 
 describe('s3DocViewer class helpers', () => {
     it('buildColumns adds lookup columns based on data', () => {
