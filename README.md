@@ -30,7 +30,7 @@ Contact / Case / Task pages.
 | ----------------- | -------------------------------------------------------------------------------- |
 | **Core LWC**      | `s3DocViewer` – lists files, filters, inline edit, previews & uploads            |
 | **Helper LWCs**   | `pdfViewer`, `docxViewer` – lightweight wrappers around PDF.js / docx‑js         |
-| **AWS Pieces**    | `generate-presigned-url` Lambda, `msg-to-html` Lambda, S3 bucket, API Gateway    |
+| **AWS Pieces**    | `generate-presigned-url` Lambda, `MsgToEml` Lambda, S3 bucket, API Gateway       |
 | **Custom Object** | `S3_File__c` (look‑ups to Account, Opportunity, Contact, Case, **Task Id text**) |
 
 ---

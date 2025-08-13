@@ -10,7 +10,6 @@ and where to add new features.
 | `s3DocViewer` | `force-app/main/default/lwc/s3DocViewer` | Main UI for listing, uploading and previewing `S3_File__c` records. Calls multiple Apex services for data and S3 access. |
 | `pdfViewer` | `force-app/main/default/lwc/pdfViewer` | Wraps the `pdfjs` static resource to display PDFs. |
 | `docxViewer` | `force-app/main/default/lwc/docxViewer` | Uses the `mammoth` static resource to render `.docx` files. |
-| `test_component` | `force-app/main/default/lwc/test_component` | Simple harness used by the Jest tests. |
 
 ### s3DocViewer flow
 1. Fetches records via `S3DocService.getDocs`.
@@ -26,7 +25,7 @@ and where to add new features.
 | `S3FileCreator` | `force-app/main/default/classes/S3FileCreator.cls` | Inserts `S3_File__c` rows after a successful upload. |
 | `S3PresignService` | `force-app/main/default/classes/S3PresignService.cls` | Calls the `S3PresignAPI` named credential to obtain pre‑signed upload and download URLs. |
 | `MsgPreviewService` | `force-app/main/default/classes/MsgPreviewService.cls` | Invokes the `MsgPreviewAPI` named credential to convert `.msg` files to HTML. |
-| `FileMultipartUploadJob`, `FileSyncBatch`, `FileSyncWorker`, `Sched_FileSync_Nightly` | `force-app/main/default/classes` | Background jobs for syncing `ContentVersion` records to S3 and performing chunked uploads. |
+| `FileUploadJob`, `FileSyncBatch`, `FileSyncWorker`, `Sched_FileSync_Nightly` | `force-app/main/default/classes` | Background jobs for syncing `ContentVersion` records to S3 and performing chunked uploads. |
 | `ObjectAdd`, `ObjectList` | `force-app/main/default/classes` | Lightweight helpers used in unit tests. |
 
 All classes include corresponding `*Test` files to provide Apex unit coverage.

@@ -35,7 +35,7 @@ Everything listed here is physically present in `force‑app/main/default`.
 | `S3DocService` / **Test** | SOQL façade used by the LWC to list & fetch records |
 | `S3FileCreator` | Creates `S3_File__c` after a successful S3 upload |
 | `S3PresignService` / **Test** | Generates pre-signed S3 URLs for uploads |
-| `FileMultipartUploadJob` / **Test** | Async job handling multi-part S3 uploads |
+| `FileUploadJob` / **Test** | Async job handling multi-part S3 uploads |
 | `FileSyncBatch` / **Test** | Batch to synchronise `ContentVersion` records with S3 |
 | `FileSyncWorker` / **Test** | Processes a single file during sync |
 | `Sched_FileSync_Nightly` / **Test** | Schedules nightly sync of files to S3 |
@@ -53,7 +53,6 @@ Everything listed here is physically present in `force‑app/main/default`.
 | `lwc/s3DocViewer` | Main document viewer / uploader |
 | `lwc/pdfViewer`  | Tiny wrapper around **PDF.js** static‑resource |
 | `lwc/docxViewer` | Uses **Mammoth** static‑resource to render *.docx* |
-| `lwc/msgViewer` | Renders *.msg* e‑mail files and attachments |
 
 ---
 
