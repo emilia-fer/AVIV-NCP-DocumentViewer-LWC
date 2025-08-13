@@ -14,6 +14,8 @@ MAX_INLINE = 1_000_000      # skip embedding > 1 MB
 MAX_TOTAL   = 10_000_000    # skip any single attachment > 10 MB
 
 def lambda_handler(event, context):
+    path = None
+    msg = None
     try:
         params = event.get("queryStringParameters") or {}
         key    = params.get("key") or ""
@@ -21,7 +23,7 @@ def lambda_handler(event, context):
         # ------- validate key -------
         if not re.fullmatch(r"[A-Za-z0-9@._\-\/]+", key):
             raise ValueError("Invalid key format")
-        
+
         # ------- download from S3 -------
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             s3.download_fileobj(BUCKET, key, tmp)
@@ -61,3 +63,14 @@ def lambda_handler(event, context):
             "headers": {"Access-Control-Allow-Origin": "*"},
             "body": json.dumps({"error": str(e)})
         }
+    finally:
+        if msg:
+            try:
+                msg.close()
+            except Exception:
+                pass
+        if path:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
