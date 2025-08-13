@@ -23,6 +23,10 @@ import updateDescriptions from'@salesforce/apex/S3DocService.updateDescriptions'
 import createS3File from '@salesforce/apex/S3FileCreator.create';
 import getPresignedUrl from '@salesforce/apex/S3PresignService.getPresignedUrl';
 import getPresignedGetUrl from '@salesforce/apex/S3PresignService.getPresignedGetUrl';
+import listPending from '@salesforce/apex/S3DocService.listPending';
+import getPendingPayload from '@salesforce/apex/S3DocService.getPendingPayload';
+import completePending from '@salesforce/apex/S3DocService.completePending';
+import getPresignedPutForKey from '@salesforce/apex/S3PresignService.getPresignedPutForKey';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import fetchMsg from '@salesforce/apex/MsgPreviewService.fetch';
 import { refreshApex } from '@salesforce/apex';
@@ -288,6 +292,12 @@ export default class S3DocViewer extends LightningElement {
     pageRecordId = this.recordId;
     _blobUrl = undefined;
 
+        // ----- Pending upload worker state (background) -----
+    _pendingTimer = null;           // interval id
+    _pendingBusy  = false;          // simple reentrancy guard
+    _pendingEveryMs = 30_000;       // poll cadence (30s is usually fine)
+
+
     /* ---------------- Options ---------------- */
     modeOptions = [
         { label: this.labels.contains,   value: 'contains' },
@@ -360,6 +370,20 @@ export default class S3DocViewer extends LightningElement {
                 break;
             default:
                 this.optionalCols = [];
+        }
+                // Kick a background pass immediately, then poll
+        if (typeof this._kickPendingOnce === 'function') {
+            this._kickPendingOnce();                           // first pass without waiting
+            this._pendingTimer = window.setInterval(() => {
+                this._kickPendingOnce();
+            }, this._pendingEveryMs);
+        }
+    }
+
+    disconnectedCallback() {
+        if (this._pendingTimer) {
+            window.clearInterval(this._pendingTimer);
+            this._pendingTimer = null;
         }
     }
 
@@ -1012,6 +1036,68 @@ export default class S3DocViewer extends LightningElement {
             : false;
     }
 
+    
+    /**
+     * Background worker: find Pending_Upload__c rows for current record,
+     * upload each to S3, then finalize in Apex. Silent on UI.
+     */
+    async _kickPendingOnce() {
+        if (this._pendingBusy || !this.recordId) return;
+        this._pendingBusy = true;
+
+        try {
+            // 1) fetch rows for this page’s record (Account/Case/etc)
+            const rows = await listPending({ hostId: this.recordId });
+            if (!Array.isArray(rows) || rows.length === 0) return;
+
+            // 2) process sequentially (keeps load predictable)
+            for (const p of rows) {
+                await this._processPendingOne(p);
+            }
+
+            // 3) refresh the grid if anything changed
+            await refreshApex(this.wiredDocsResult);
+        } catch (e) {
+            // quiet in UI, log for troubleshooting
+            // (intentionally no toast, runs in the background)
+            console.error('[s3DocViewer] pending worker error', e);
+        } finally {
+            this._pendingBusy = false;
+        }
+    }
+
+    /** Handle one Pending_Upload__c: download payload, PUT to S3 (existing key), finalize. */
+    async _processPendingOne(pendingRow) {
+        // A) get the payload + the exact S3 key that server decided for this file
+        const payload = await getPendingPayload({ pendingId: pendingRow.Id });
+        // { base64Data, contentType, key }
+        if (!payload || !payload.key || !payload.base64Data) {
+            console.warn('[s3DocViewer] skip pending row due to missing payload/key', pendingRow.Id);
+            return;
+        }
+
+        // B) ask backend for a presigned PUT *for this exact key*
+        const { uploadUrl } = await getPresignedPutForKey({
+            s3Key: payload.key,
+            contentType: payload.contentType || 'application/octet-stream'
+        });
+        if (!uploadUrl) throw new Error('No presigned PUT URL returned');
+
+        // C) PUT the bytes to S3
+        const bytes = this.base64ToBytes(payload.base64Data);
+        const putResp = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': payload.contentType || 'application/octet-stream' },
+            body: new Blob([bytes], { type: payload.contentType || 'application/octet-stream' })
+        });
+        if (!putResp.ok) {
+            const txt = await safeText(putResp);
+            throw new Error(`S3 PUT failed ${putResp.status}: ${txt}`);
+        }
+
+        // D) tell Apex to create S3_File__c + delete Pending_Upload__c
+        await completePending({ pendingId: pendingRow.Id });
+    }
 
     /* ========================================================================
      * ------------------------------ ROW PREVIEW -----------------------------
@@ -1249,7 +1335,9 @@ export default class S3DocViewer extends LightningElement {
                 })
             );
             /* refresh list  */
-            refreshApex(this.wiredDocsResult); 
+            refreshApex(this.wiredDocsResult);
+            // Also give the pending worker a chance to run immediately
+            this._kickPendingOnce();
             /* close the modal */
             this.closeModal();
         } catch (err) {
@@ -1266,6 +1354,11 @@ export default class S3DocViewer extends LightningElement {
             this.isUploading = false;
         }
     }
+}
+
+// small helper to read error bodies without throwing
+async function safeText(resp) {
+    try { return await resp.text(); } catch { return ''; }
 }
 
 // Export helper functions for unit testing
