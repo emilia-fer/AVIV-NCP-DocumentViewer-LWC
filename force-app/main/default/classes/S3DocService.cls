@@ -177,4 +177,90 @@ public with sharing class S3DocService {
         }
         return new List<Contact>();
     }
+    
+    // 1) List pending uploads for a record page (Account/Opportunity/Case/Contact/Task)
+    @AuraEnabled(cacheable=true)
+    public static List<Pending_Upload__c> listPending(Id recordId) {
+        if (recordId == null) return new List<Pending_Upload__c>();
+        return [
+            SELECT Id, Name, S3_Key__c, Mime_Type__c, Size__c, Content_Version_ID__c,
+                   Account_ID__c, Opportunity_ID__c, Case_ID__c, Contact_ID__c, Task_Id__c,
+                   Status__c
+            FROM Pending_Upload__c
+            WHERE (Account_ID__c     = :recordId OR
+                   Opportunity_ID__c = :recordId OR
+                   Contact_ID__c     = :recordId OR
+                   Case_ID__c        = :recordId OR
+                   Task_Id__c        = :String.valueOf(recordId))
+            ORDER BY CreatedDate ASC
+            LIMIT 200
+        ];
+    }
+    
+    // 2) Fetch the binary + mime for ONE pending row
+    public class PendingPayload {
+        @AuraEnabled public String base64Data;
+        @AuraEnabled public String contentType;
+        @AuraEnabled public String key;
+    }
+    @AuraEnabled
+    public static PendingPayload getPendingPayload(Id pendingId) {
+        Pending_Upload__c p = [
+            SELECT Id, Content_Version_ID__c, Mime_Type__c, S3_Key__c
+            FROM Pending_Upload__c
+            WHERE Id = :pendingId
+            LIMIT 1
+        ];
+        Blob body = [
+            SELECT VersionData
+            FROM   ContentVersion
+            WHERE  Id = :p.Content_Version_ID__c
+            LIMIT  1
+        ].VersionData;
+    
+        PendingPayload out = new PendingPayload();
+        out.base64Data  = EncodingUtil.base64Encode(body);
+        out.contentType = String.isBlank(p.Mime_Type__c) ? 'application/octet-stream' : p.Mime_Type__c;
+        out.key         = p.S3_Key__c;
+        return out;
+    }
+    
+    // 3) Finalize after a successful PUT to S3: upsert S3_File__c and remove pending
+    @AuraEnabled
+    public static void completePending(Id pendingId) {
+        Pending_Upload__c p = [
+            SELECT Id, Name, S3_Key__c, Mime_Type__c, Size__c, Content_Version_ID__c,
+                   Account_ID__c, Opportunity_ID__c, Case_ID__c, Contact_ID__c, Task_Id__c
+            FROM Pending_Upload__c
+            WHERE Id = :pendingId
+            LIMIT 1
+        ];
+    
+        // Build the same S3_File__c shape as your small-file path
+        ContentVersion cv = [
+            SELECT Id, Title, ContentSize, FileType, LastModifiedDate
+            FROM   ContentVersion
+            WHERE  Id = :p.Content_Version_ID__c
+            LIMIT  1
+        ];
+    
+        S3_File__c up = new S3_File__c(
+            Content_Version_ID__c = cv.Id,
+            Name                  = cv.Title,
+            Size__c               = cv.ContentSize,
+            Type__c               = cv.FileType,
+            Content_Modified__c   = cv.LastModifiedDate,
+            Last_Synched__c       = System.now(),
+            S3_Key__c             = p.S3_Key__c,
+            Account_ID__c         = p.Account_ID__c,
+            Opportunity_ID__c     = p.Opportunity_ID__c,
+            Case_ID__c            = p.Case_ID__c,
+            Contact_ID__c         = p.Contact_ID__c,
+            Task_ID__c            = p.Task_Id__c
+        );
+        upsert up Content_Version_ID__c;
+    
+        delete p;
+    }
+
 }
